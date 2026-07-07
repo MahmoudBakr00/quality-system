@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>تسجيل الدخول - نظام فحص الصاج</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+.login-container { background: #1e293b; padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 400px; }
+.login-container h2 { color: #f8fafc; text-align: center; margin-bottom: 30px; font-size: 28px; }
+.login-container label { color: #cbd5e1; display: block; margin-bottom: 6px; font-weight: 600; }
+.login-container input { width: 100%; padding: 12px 16px; margin-bottom: 20px; border: none; border-radius: 8px; background: #334155; color: #f1f5f9; font-size: 16px; transition: 0.3s; }
+.login-container input:focus { outline: 2px solid #3b82f6; background: #1e293b; }
+.login-container button { width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+.login-container button:hover { background: #2563eb; transform: scale(1.02); }
+.login-container button:disabled { opacity: 0.6; cursor: not-allowed; }
+.error-msg { color: #f87171; text-align: center; margin-top: 12px; font-size: 14px; }
+.register-link { color: #94a3b8; text-align: center; margin-top: 16px; font-size: 14px; }
+.register-link a { color: #60a5fa; text-decoration: none; cursor: pointer; }
+.register-link a:hover { text-decoration: underline; }
+.footer { text-align: center; color: #475569; margin-top: 20px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="login-container">
+<h2>🔐 تسجيل الدخول</h2>
+<form id="loginForm">
+<label>البريد الإلكتروني</label>
+<input type="email" id="email" placeholder="example@company.com" required />
+<label>كلمة المرور</label>
+<input type="password" id="password" placeholder="••••••••" required />
+<button type="submit" id="loginBtn">دخول</button>
+<div id="errorMsg" class="error-msg"></div>
+</form>
+<div class="register-link">
+ليس لديك حساب؟ <a id="registerLink">إنشاء حساب جديد</a>
+</div>
+<div class="footer">نظام إدارة فحص الصاج - نسخة Supabase</div>
+</div>
+
+<script>
+// =======================================================
+// بيانات مشروعك من Supabase (Settings > API)
+// =======================================================
+const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
+
+// التحقق من وجود المكتبة
+if (typeof supabase === 'undefined') {
+  document.getElementById('errorMsg').textContent = '❌ فشل تحميل مكتبة Supabase، تأكد من اتصال الإنترنت';
+  document.getElementById('errorMsg').style.display = 'block';
+}
+
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errorMsg = document.getElementById('errorMsg');
+  const btn = document.getElementById('loginBtn');
+  errorMsg.textContent = '';
+  errorMsg.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الدخول...';
+
+  try {
+    // محاولة تسجيل الدخول
+    const { data, error } = await client.auth.signInWithPassword({ 
+      email, 
+      password 
+    });
+    
+    if (error) {
+      errorMsg.textContent = '❌ ' + error.message;
+      errorMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'دخول';
+      return;
+    }
+
+    if (!data || !data.user) {
+      errorMsg.textContent = '❌ لم يتم العثور على المستخدم';
+      errorMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'دخول';
+      return;
+    }
+
+    // جلب دور المستخدم
+    const { data: profile, error: profileError } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      errorMsg.textContent = '⚠️ لم يتم العثور على بيانات المستخدم';
+      errorMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'دخول';
+      return;
+    }
+
+    // التوجيه حسب الدور
+    if (profile.role === 'technician') {
+      window.location.href = 'technician.html';
+    } else if (profile.role === 'admin') {
+      window.location.href = 'admin.html';
+    } else {
+      errorMsg.textContent = '⚠️ دور غير معروف: ' + profile.role;
+      errorMsg.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'دخول';
+    }
+  } catch (error) {
+    errorMsg.textContent = '❌ حدث خطأ: ' + error.message;
+    errorMsg.style.display = 'block';
+    console.error('Login error:', error);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'دخول';
+  }
+});
+
+// إنشاء حساب جديد
+document.getElementById('registerLink').addEventListener('click', async () => {
+  const email = prompt('📧 أدخل البريد الإلكتروني للمستخدم الجديد:');
+  if (!email) return;
+  
+  const password = prompt('🔑 أدخل كلمة المرور (6 أحرف على الأقل):');
+  if (!password || password.length < 6) {
+    alert('⚠️ كلمة المرور يجب أن تكون 6 أحرف أو أكثر');
+    return;
+  }
+  
+  const roleChoice = confirm(
+    '👤 اختر دور المستخدم:\n\n' +
+    'اضغط "موافق" → أدمن (مدير)\n' +
+    'اضغط "إلغاء" → فني (تقني)'
+  );
+  const role = roleChoice ? 'admin' : 'technician';
+
+  try {
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: { 
+        data: { role },
+        emailRedirectTo: window.location.origin + '/index.html'
+      }
+    });
+    
+    if (error) {
+      alert('❌ فشل إنشاء الحساب: ' + error.message);
+      return;
+    }
+    
+    alert('✅ تم إنشاء الحساب بنجاح!\n' +
+      '📧 ' + email + '\n' +
+      '👤 الدور: ' + (role === 'admin' ? 'أدمن' : 'فني') + '\n\n' +
+      'يمكنك الآن تسجيل الدخول.');
+  } catch (error) {
+    alert('❌ فشل إنشاء الحساب: ' + error.message);
+  }
+});
+</script>
+</body>
+</html>

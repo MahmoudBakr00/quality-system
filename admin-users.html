@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>إدارة الادمن - الأدمن العام</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #0f172a; padding: 20px; color: #f1f5f9; }
+.container { max-width: 1200px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 16px 30px; border-radius: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+.header h1 { color: #60a5fa; }
+.nav-links a { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-left: 8px; }
+.nav-links a:hover { background: #475569; }
+.logout-btn { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.logout-btn:hover { background: #dc2626; }
+
+.panel { background: #1e293b; border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+.panel h2 { color: #60a5fa; margin-bottom: 16px; }
+.panel .hint { color: #64748b; font-size: 13px; margin-bottom: 12px; }
+
+.user-card { background: #334155; border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.user-card .info { display: flex; flex-direction: column; }
+.user-card .info .name { font-weight: bold; color: #f1f5f9; }
+.user-card .info .email { font-size: 12px; color: #94a3b8; }
+.user-card .stages-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.user-card .stages-list .tag { background: #1e293b; padding: 2px 10px; border-radius: 20px; font-size: 11px; color: #60a5fa; }
+
+.btn-edit { background: #3b82f6; color: white; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-edit:hover { background: #2563eb; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: #1e293b; border-radius: 14px; padding: 24px; width: 90%; max-width: 450px; max-height: 80vh; overflow-y: auto; }
+.modal-box h3 { color: #60a5fa; margin-bottom: 16px; }
+.modal-box .field { margin-bottom: 14px; }
+.modal-box .field label { display: block; color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
+.modal-box .field select, .modal-box .field input { width: 100%; padding: 10px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
+.modal-box .field .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; }
+.modal-box .field .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #e2e8f0; cursor: pointer; }
+.modal-box .field .checkbox-group label input { width: auto; }
+.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+.modal-actions button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.modal-save { background: #22c55e; color: white; }
+.modal-save:hover { background: #16a34a; }
+.modal-cancel { background: #64748b; color: white; }
+.modal-cancel:hover { background: #475569; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>👥 إدارة الادمن الفرعيين</h1>
+<div class="nav-links">
+<a href="admin.html">📊 لوحة التحكم</a>
+<a href="models-manager.html">🧩 إدارة الموديلات</a>
+<a href="submissions.html">📄 سجلات الفورمات</a>
+<a href="defects-admin.html">🔧 إدارة العيوب</a>
+<button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
+</div>
+</div>
+
+<div class="panel">
+<h2>📋 الادمن المسجلون</h2>
+<div class="hint">🔹 الأدمن العام (أنت) يمكنه التحكم بكل المراحل.<br>🔹 الأدمن الفرعي يمكن تخصيصه لمراحل معينة فقط.</div>
+<div id="adminsList"><div class="hint">⏳ جاري التحميل...</div></div>
+</div>
+</div>
+
+<!-- مودال تعديل صلاحيات الأدمن -->
+<div class="modal-overlay" id="editModal">
+<div class="modal-box">
+<h3 id="editTitle">🔧 تعديل صلاحيات الأدمن</h3>
+<div class="field">
+<label>📧 البريد الإلكتروني</label>
+<input type="text" id="editEmail" disabled />
+</div>
+<div class="field">
+<label>🏭 المراحل المسموح بها (اختر المراحل التي يمكن لهذا الأدمن إدارتها)</label>
+<div class="checkbox-group" id="editStagesCheckboxes"></div>
+</div>
+<div class="modal-actions">
+<button class="modal-save" id="editSaveBtn">💾 حفظ التعديلات</button>
+<button class="modal-cancel" id="editCancelBtn">إلغاء</button>
+</div>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let allAdmins = [];
+let allStages = [];
+let adminStagesMap = {};
+
+async function checkAuth() {
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+  const { data: profile } = await client.from('profiles').select('role').eq('id', user.id).single();
+  if (!profile || profile.role !== 'admin') { window.location.href = 'index.html'; return; }
+  await loadAllData();
+}
+checkAuth();
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await client.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+async function loadAllData() {
+  const { data: admins } = await client.from('profiles').select('id, email, role').eq('role', 'admin');
+  allAdmins = admins || [];
+  
+  const { data: stages } = await client.from('stages').select('*').order('name');
+  allStages = stages || [];
+  
+  const { data: adminStages } = await client.from('admin_stages').select('*');
+  adminStagesMap = {};
+  (adminStages || []).forEach(as => {
+    if (!adminStagesMap[as.admin_id]) adminStagesMap[as.admin_id] = [];
+    adminStagesMap[as.admin_id].push(as.stage_id);
+  });
+  
+  renderAdmins();
+}
+
+function renderAdmins() {
+  const container = document.getElementById('adminsList');
+  if (allAdmins.length === 0) {
+    container.innerHTML = `<div class="hint">📭 لا يوجد ادمن مسجلين بعد</div>`;
+    return;
+  }
+  
+  let html = '';
+  allAdmins.forEach(admin => {
+    const isCurrent = admin.id === currentUser.id;
+    const assignedStages = adminStagesMap[admin.id] || [];
+    const stageNames = assignedStages.map(id => {
+      const s = allStages.find(st => st.id === id);
+      return s ? s.name : '';
+    }).filter(Boolean);
+    
+    html += `
+      <div class="user-card">
+        <div class="info">
+          <div class="name">${admin.email || 'بدون بريد'} ${isCurrent ? '⭐ (أنت)' : ''}</div>
+          <div class="email">${isCurrent ? 'الأدمن العام - لديه صلاحية كل المراحل' : 'الأدمن الفرعي'}</div>
+          <div class="stages-list">
+            ${isCurrent ? '<span class="tag" style="background:#3b82f6;">🔓 كل المراحل</span>' :
+              stageNames.length > 0 ? stageNames.map(n => `<span class="tag">🏭 ${n}</span>`).join('') :
+              '<span class="tag" style="color:#64748b;">🚫 بدون صلاحيات</span>'}
+          </div>
+        </div>
+        ${!isCurrent ? `<button class="btn-edit" data-id="${admin.id}">✏️ تعديل</button>` : ''}
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+  
+  document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+  });
+}
+
+function openEditModal(adminId) {
+  const admin = allAdmins.find(a => a.id === adminId);
+  if (!admin) return;
+  
+  document.getElementById('editTitle').textContent = `🔧 تعديل صلاحيات - ${admin.email}`;
+  document.getElementById('editEmail').value = admin.email;
+  
+  const assigned = adminStagesMap[adminId] || [];
+  const container = document.getElementById('editStagesCheckboxes');
+  container.innerHTML = '';
+  allStages.forEach(stage => {
+    const checked = assigned.includes(stage.id) ? 'checked' : '';
+    container.innerHTML += `
+      <label>
+        <input type="checkbox" value="${stage.id}" ${checked} />
+        ${stage.name}
+      </label>
+    `;
+  });
+  
+  document.getElementById('editModal').dataset.adminId = adminId;
+  document.getElementById('editModal').classList.add('open');
+}
+
+document.getElementById('editCancelBtn').addEventListener('click', () => {
+  document.getElementById('editModal').classList.remove('open');
+});
+
+document.getElementById('editSaveBtn').addEventListener('click', async () => {
+  const adminId = document.getElementById('editModal').dataset.adminId;
+  const checkedStages = Array.from(document.querySelectorAll('#editStagesCheckboxes input:checked')).map(el => el.value);
+  
+  await client.from('admin_stages').delete().eq('admin_id', adminId);
+  
+  if (checkedStages.length > 0) {
+    const rows = checkedStages.map(stageId => ({
+      admin_id: adminId,
+      stage_id: stageId
+    }));
+    const { error } = await client.from('admin_stages').insert(rows);
+    if (error) {
+      alert('❌ فشل حفظ التعديلات: ' + error.message);
+      return;
+    }
+  }
+  
+  document.getElementById('editModal').classList.remove('open');
+  await loadAllData();
+  alert('✅ تم تحديث صلاحيات الأدمن بنجاح!');
+});
+</script>
+</body>
+</html>

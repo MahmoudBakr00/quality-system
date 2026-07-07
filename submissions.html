@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>سجلات الفورمات - الأدمن</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #0f172a; padding: 20px; color: #f1f5f9; }
+.container { max-width: 1300px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 16px 30px; border-radius: 14px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.header h1 { color: #60a5fa; font-size: 22px; }
+.nav-links { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.nav-links a { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.nav-links a:hover { background: #475569; }
+.logout-btn { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.logout-btn:hover { background: #dc2626; }
+
+.filter-bar { display: flex; gap: 10px; flex-wrap: wrap; background: #1e293b; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; align-items: center; }
+.filter-bar select, .filter-bar input { padding: 8px 14px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
+.filter-bar button { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; background: #3b82f6; color: white; }
+.filter-bar button:hover { background: #2563eb; }
+
+.table-wrapper { overflow-x: auto; background: #1e293b; border-radius: 14px; padding: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
+th { background: #334155; color: #94a3b8; padding: 10px 8px; text-align: center; }
+td { padding: 8px; text-align: center; border-bottom: 1px solid #334155; color: #e2e8f0; }
+tr:hover td { background: #2d3a4f; }
+.details-btn { background: #8b5cf6; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.details-btn:hover { background: #7c3aed; }
+.loading, .no-data { text-align: center; padding: 40px; color: #94a3b8; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: #1e293b; border-radius: 14px; padding: 24px; width: 90%; max-width: 550px; max-height: 80vh; overflow-y: auto; }
+.modal-box h3 { color: #60a5fa; margin-bottom: 14px; }
+.modal-box .qa-row { background: #334155; padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; }
+.modal-box .qa-row .q { color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
+.modal-box .qa-row .a { font-weight: bold; }
+.modal-close { background: #64748b; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px; width: 100%; }
+.modal-close:hover { background: #475569; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>📄 سجلات الفورمات الديناميكية</h1>
+<div class="nav-links">
+<a href="admin.html">📊 لوحة القراءات</a>
+<a href="models-manager.html">🧩 إدارة الموديلات</a>
+<a href="defects-admin.html">🔧 إدارة العيوب</a>
+<a href="admin-users.html">👥 إدارة الادمن</a>
+<button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
+</div>
+</div>
+
+<div class="filter-bar">
+<select id="filterStage"><option value="">كل المراحل</option></select>
+<select id="filterForm"><option value="">كل الموديلات</option></select>
+<input type="text" id="filterSerial" placeholder="السيريال" />
+<button id="applyFilter">🔍 تصفية</button>
+<button id="resetFilter" style="background:#64748b;">↺ إعادة تعيين</button>
+</div>
+
+<div class="table-wrapper">
+<table>
+<thead><tr><th>#</th><th>التاريخ</th><th>الوقت</th><th>المرحلة</th><th>الموديل</th><th>السيريال</th><th>العامل</th><th>الفني</th><th></th></tr></thead>
+<tbody id="tbody"><tr><td colspan="9" class="loading">⏳ جاري التحميل...</td></tr></tbody>
+</table>
+</div>
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+<div class="modal-box">
+<h3 id="modalTitle">تفاصيل السجل</h3>
+<div id="modalBody"></div>
+<button class="modal-close" id="modalClose">إغلاق</button>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let stagesMap = {}, formsMap = {};
+let allSubmissions = [];
+
+async function checkAuth() {
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) { window.location.href = 'index.html'; return; }
+  const { data: profile } = await client.from('profiles').select('role').eq('id', user.id).single();
+  if (!profile || profile.role !== 'admin') { window.location.href = 'index.html'; return; }
+  await loadLookups();
+  loadSubmissions();
+}
+checkAuth();
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await client.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+async function loadLookups() {
+  const { data: stages } = await client.from('stages').select('*');
+  const { data: forms } = await client.from('forms').select('*');
+  (stages || []).forEach(s => stagesMap[s.id] = s.name);
+  (forms || []).forEach(f => formsMap[f.id] = f.name);
+
+  const stageSel = document.getElementById('filterStage');
+  (stages || []).forEach(s => {
+    const o = document.createElement('option'); o.value = s.id; o.textContent = s.name;
+    stageSel.appendChild(o);
+  });
+  const formSel = document.getElementById('filterForm');
+  (forms || []).forEach(f => {
+    const o = document.createElement('option'); o.value = f.id; o.textContent = f.name;
+    formSel.appendChild(o);
+  });
+}
+
+async function loadSubmissions() {
+  const { data, error } = await client.from('form_submissions').select('*').order('created_at', { ascending: false });
+  if (error) { document.getElementById('tbody').innerHTML = `<tr><td colspan="9" class="loading">❌ فشل التحميل</td></tr>`; return; }
+  allSubmissions = data || [];
+  render(allSubmissions);
+}
+
+function render(data) {
+  const tbody = document.getElementById('tbody');
+  if (!data || data.length === 0) { tbody.innerHTML = `<tr><td colspan="9" class="no-data">📭 لا توجد سجلات بعد</td></tr>`; return; }
+  tbody.innerHTML = '';
+  data.forEach((d, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${d.submission_date || '-'}</td><td>${d.submission_time || '-'}</td>
+      <td>${stagesMap[d.stage_id] || '-'}</td><td>${formsMap[d.form_id] || '-'}</td>
+      <td>${d.serial_number || '-'}</td>
+      <td>${d.worker || '-'}</td><td>${d.technician_email ? d.technician_email.split('@')[0] : '-'}</td>
+      <td><button class="details-btn" data-id="${d.id}">👁 التفاصيل</button></td>`;
+    tr.querySelector('.details-btn').addEventListener('click', () => showDetails(d.id, formsMap[d.form_id]));
+    tbody.appendChild(tr);
+  });
+}
+
+async function showDetails(submissionId, formName) {
+  document.getElementById('modalTitle').textContent = '📋 ' + (formName || 'تفاصيل السجل');
+  document.getElementById('modalBody').innerHTML = '⏳ جاري التحميل...';
+  document.getElementById('modalOverlay').classList.add('open');
+
+  const { data: answers, error } = await client
+    .from('form_answers')
+    .select('answer_value, form_questions(question_text)')
+    .eq('submission_id', submissionId);
+
+  if (error || !answers || answers.length === 0) {
+    document.getElementById('modalBody').innerHTML = '<div style="color:#64748b;">لا توجد إجابات مسجلة</div>';
+    return;
+  }
+  document.getElementById('modalBody').innerHTML = answers.map(a => `
+    <div class="qa-row">
+      <div class="q">${a.form_questions ? a.form_questions.question_text : 'سؤال'}</div>
+      <div class="a">${a.answer_value || '-'}</div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('modalClose').addEventListener('click', () => {
+  document.getElementById('modalOverlay').classList.remove('open');
+});
+
+document.getElementById('applyFilter').addEventListener('click', () => {
+  const stageId = document.getElementById('filterStage').value;
+  const formId = document.getElementById('filterForm').value;
+  const serial = document.getElementById('filterSerial').value.trim().toLowerCase();
+  let filtered = allSubmissions;
+  if (stageId) filtered = filtered.filter(d => d.stage_id === stageId);
+  if (formId) filtered = filtered.filter(d => d.form_id === formId);
+  if (serial) filtered = filtered.filter(d => d.serial_number && d.serial_number.toLowerCase().includes(serial));
+  render(filtered);
+});
+
+document.getElementById('resetFilter').addEventListener('click', () => {
+  document.getElementById('filterStage').value = '';
+  document.getElementById('filterForm').value = '';
+  document.getElementById('filterSerial').value = '';
+  render(allSubmissions);
+});
+</script>
+</body>
+</html>

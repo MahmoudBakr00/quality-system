@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>تسجيل القراءات - الفني</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #0f172a; padding: 20px; color: #f1f5f9; }
+.container { max-width: 1000px; margin: 0 auto; }
+.sub-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 20px; background: #1e293b; padding: 14px 20px; border-radius: 12px; }
+.sub-header span { color: #94a3b8; }
+.sub-header .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.sub-header .logout-btn:hover { background: #dc2626; }
+.sub-header .nav-link { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.sub-header .nav-link:hover { background: #475569; }
+.sub-header .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.view { background: #1e293b; border-radius: 16px; padding: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.view h1 { text-align: center; color: #60a5fa; margin-bottom: 24px; font-size: 24px; }
+.back-btn { background: #64748b; color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; margin-bottom: 16px; font-weight: bold; }
+.back-btn:hover { background: #475569; }
+
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.card { background: #334155; padding: 20px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; }
+.card:hover { background: #3d4c66; transform: translateY(-3px); }
+.card .icon { font-size: 30px; margin-bottom: 8px; }
+.card .name { font-weight: bold; font-size: 16px; color: #f1f5f9; }
+.card .sub { color: #94a3b8; font-size: 12px; margin-top: 4px; }
+.empty-note { color: #64748b; text-align: center; padding: 40px; font-size: 15px; grid-column: 1/-1; }
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.form-group { background: #334155; padding: 10px 14px; border-radius: 10px; display: flex; flex-direction: column; }
+.form-group label { font-size: 12px; color: #94a3b8; margin-bottom: 4px; font-weight: 600; }
+.form-group input, .form-group select { padding: 6px 10px; border: none; border-radius: 6px; background: #1e293b; color: #f1f5f9; font-size: 14px; }
+.form-group input:focus, .form-group select:focus { outline: 2px solid #3b82f6; }
+.section-title { grid-column: 1 / -1; color: #60a5fa; font-size: 16px; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-top: 8px; }
+.btn-submit { grid-column: 1 / -1; padding: 14px; background: #22c55e; color: white; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.btn-submit:hover { background: #16a34a; }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.msg { padding: 12px; border-radius: 8px; text-align: center; margin-top: 16px; display: none; font-weight: bold; }
+.msg-success { background: #22c55e; color: white; }
+.msg-error { background: #ef4444; color: white; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="sub-header">
+<span>👤 <span id="userEmail">فني</span></span>
+<div class="header-actions">
+<a href="technician-defects.html" class="nav-link">🔧 تسجيل عيوب</a>
+<button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
+</div>
+</div>
+
+<!-- View 1: اختيار المرحلة -->
+<div class="view" id="stageView">
+<h1>🏭 اختر المرحلة</h1>
+<div class="cards-grid" id="stageCards"><div class="empty-note">⏳ جاري التحميل...</div></div>
+</div>
+
+<!-- View 2: اختيار الموديل/الفورم -->
+<div class="view" id="formView" style="display:none;">
+<button class="back-btn" id="backToStages">⬅ رجوع للمراحل</button>
+<h1 id="formViewTitle">📦 اختر الموديل</h1>
+<div class="cards-grid" id="formCards"><div class="empty-note">⏳ جاري التحميل...</div></div>
+</div>
+
+<!-- View 3: تعبئة الفورم -->
+<div class="view" id="answerView" style="display:none;">
+<button class="back-btn" id="backToForms">⬅ رجوع للموديلات</button>
+<h1 id="answerViewTitle">📋 تسجيل القراءات</h1>
+<form id="dynamicForm">
+<div class="form-grid" id="dynamicFormGrid">
+<div class="form-group"><label>اسم العامل (Worker)</label><input type="text" name="worker" placeholder="اسم العامل" /></div>
+<div class="form-group"><label>التاريخ</label><input type="date" name="submissionDate" /></div>
+<div class="form-group"><label>الوقت</label><input type="time" name="submissionTime" /></div>
+<div class="form-group"><label>السيريال (اختياري)</label><input type="text" name="serialNumber" placeholder="رقم السيريال" /></div>
+<div class="section-title">🔍 أسئلة الفحص</div>
+</div>
+<button type="submit" class="btn-submit" id="submitBtn">✅ حفظ القراءات</button>
+</form>
+<div id="successMsg" class="msg msg-success">✅ تم حفظ القراءات بنجاح!</div>
+<div id="errorMsg" class="msg msg-error">❌ حدث خطأ، حاول مرة أخرى.</div>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let selectedStage = null;
+let selectedForm = null;
+let currentQuestions = [];
+
+async function checkAuth() {
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+  document.getElementById('userEmail').textContent = user.email;
+  loadStages();
+}
+checkAuth();
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await client.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+function showView(view) {
+  document.getElementById('stageView').style.display = view === 'stage' ? 'block' : 'none';
+  document.getElementById('formView').style.display = view === 'form' ? 'block' : 'none';
+  document.getElementById('answerView').style.display = view === 'answer' ? 'block' : 'none';
+}
+
+async function loadStages() {
+  const el = document.getElementById('stageCards');
+  const { data, error } = await client.from('stages').select('*').order('created_at', { ascending: true });
+  if (error) { el.innerHTML = `<div class="empty-note">❌ فشل تحميل المراحل</div>`; return; }
+  if (!data || data.length === 0) { el.innerHTML = `<div class="empty-note">📭 لا توجد مراحل مضافة بعد. تواصل مع الأدمن.</div>`; return; }
+  el.innerHTML = '';
+  data.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div class="icon">🏭</div><div class="name">${s.name}</div><div class="sub">${s.line_no ? 'خط: ' + s.line_no : ''}</div>`;
+    div.addEventListener('click', () => {
+      selectedStage = s;
+      document.getElementById('formViewTitle').textContent = '📦 اختر الموديل - ' + s.name;
+      showView('form');
+      loadForms(s.id);
+    });
+    el.appendChild(div);
+  });
+}
+
+document.getElementById('backToStages').addEventListener('click', () => showView('stage'));
+document.getElementById('backToForms').addEventListener('click', () => showView('form'));
+
+async function loadForms(stageId) {
+  const el = document.getElementById('formCards');
+  el.innerHTML = `<div class="empty-note">⏳ جاري التحميل...</div>`;
+  const { data, error } = await client.from('forms').select('*').eq('stage_id', stageId).order('created_at', { ascending: true });
+  if (error) { el.innerHTML = `<div class="empty-note">❌ فشل تحميل الموديلات</div>`; return; }
+  if (!data || data.length === 0) { el.innerHTML = `<div class="empty-note">📭 لا توجد موديلات مضافة في هذه المرحلة بعد.</div>`; return; }
+  el.innerHTML = '';
+  data.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div class="icon">📦</div><div class="name">${f.name}</div><div class="sub">${f.part_no ? 'بارت: ' + f.part_no : ''}</div>`;
+    div.addEventListener('click', () => {
+      selectedForm = f;
+      document.getElementById('answerViewTitle').textContent = '📋 ' + f.name;
+      showView('answer');
+      loadQuestionsAndRenderForm(f.id);
+    });
+    el.appendChild(div);
+  });
+}
+
+async function loadQuestionsAndRenderForm(formId) {
+  const grid = document.getElementById('dynamicFormGrid');
+  Array.from(grid.querySelectorAll('.dynamic-q')).forEach(el => el.remove());
+
+  const { data, error } = await client.from('form_questions').select('*').eq('form_id', formId).order('created_at', { ascending: true });
+  if (error) { alert('❌ فشل تحميل أسئلة الفورم'); return; }
+  currentQuestions = data || [];
+
+  if (currentQuestions.length === 0) {
+    const note = document.createElement('div');
+    note.className = 'section-title dynamic-q';
+    note.style.color = '#64748b';
+    note.style.fontSize = '13px';
+    note.textContent = 'لا توجد أسئلة مضافة لهذا الموديل بعد. تواصل مع الأدمن.';
+    grid.appendChild(note);
+    return;
+  }
+
+  currentQuestions.forEach(q => {
+    const wrap = document.createElement('div');
+    wrap.className = 'form-group dynamic-q';
+    const label = document.createElement('label');
+    label.textContent = q.question_text;
+    wrap.appendChild(label);
+
+    let input;
+    if (q.answer_type === 'choice') {
+      input = document.createElement('select');
+      input.name = 'q_' + q.id;
+      (q.options || []).forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt; o.textContent = opt;
+        input.appendChild(o);
+      });
+    } else if (q.answer_type === 'number') {
+      input = document.createElement('input');
+      input.type = 'number'; input.step = '0.1'; input.name = 'q_' + q.id;
+      if (q.target_value !== null && q.target_value !== undefined) {
+        const hint = document.createElement('div');
+        hint.style.cssText = 'color:#fbbf24; font-size:11px; margin-top:2px;';
+        hint.textContent = '🎯 القيمة المطلوبة: ' + q.target_value + (q.tolerance ? ' ± ' + q.tolerance : '');
+        wrap.appendChild(hint);
+        if (q.tolerance !== null && q.tolerance !== undefined) {
+          input.addEventListener('input', () => {
+            const val = parseFloat(input.value);
+            if (!isNaN(val)) {
+              const min = q.target_value - q.tolerance, max = q.target_value + q.tolerance;
+              input.style.outline = (val < min || val > max) ? '2px solid #ef4444' : '2px solid #22c55e';
+            } else {
+              input.style.outline = '';
+            }
+          });
+        }
+      }
+    } else {
+      input = document.createElement('input');
+      input.type = 'text'; input.name = 'q_' + q.id;
+    }
+    wrap.appendChild(input);
+    grid.appendChild(wrap);
+  });
+}
+
+document.getElementById('dynamicForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+  document.getElementById('successMsg').style.display = 'none';
+  document.getElementById('errorMsg').style.display = 'none';
+
+  const form = e.target;
+  const worker = form.worker.value;
+  const submissionDate = form.submissionDate.value || new Date().toISOString().slice(0,10);
+  const submissionTime = form.submissionTime.value || new Date().toTimeString().slice(0,5);
+  const serialNumber = form.serialNumber ? form.serialNumber.value : null;
+
+  try {
+    const { data: submission, error: subError } = await client.from('form_submissions').insert([{
+      form_id: selectedForm.id,
+      stage_id: selectedStage.id,
+      worker: worker || null,
+      submission_date: submissionDate,
+      submission_time: submissionTime,
+      serial_number: serialNumber,
+      technician_email: currentUser.email,
+      technician_id: currentUser.id,
+      status: 'pending'
+    }]).select().single();
+    if (subError) throw subError;
+
+    const answers = currentQuestions.map(q => ({
+      submission_id: submission.id,
+      question_id: q.id,
+      answer_value: form['q_' + q.id] ? form['q_' + q.id].value : null
+    }));
+
+    if (answers.length > 0) {
+      const { error: ansError } = await client.from('form_answers').insert(answers);
+      if (ansError) throw ansError;
+    }
+
+    document.getElementById('successMsg').style.display = 'block';
+    form.reset();
+    setTimeout(() => { document.getElementById('successMsg').style.display = 'none'; }, 4000);
+  } catch (err) {
+    document.getElementById('errorMsg').textContent = '❌ ' + err.message;
+    document.getElementById('errorMsg').style.display = 'block';
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✅ حفظ القراءات';
+  }
+});
+</script>
+</body>
+</html>

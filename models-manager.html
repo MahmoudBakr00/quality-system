@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>إدارة المراحل والموديلات - الأدمن</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #0f172a; padding: 20px; color: #f1f5f9; }
+.container { max-width: 1500px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 16px 30px; border-radius: 14px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+.header h1 { color: #60a5fa; font-size: 22px; }
+.nav-links { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.nav-links a { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.nav-links a:hover { background: #475569; }
+.logout-btn { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.logout-btn:hover { background: #dc2626; }
+
+.board { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.panel { background: #1e293b; border-radius: 14px; padding: 18px; flex: 1; min-width: 300px; }
+.panel h2 { color: #60a5fa; font-size: 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.panel .hint { color: #64748b; font-size: 12px; margin-bottom: 10px; }
+
+.item-card { background: #334155; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.item-card:hover { background: #3d4c66; }
+.item-card.selected { border: 2px solid #3b82f6; background: #2d3a4f; }
+.item-card .title { font-weight: 600; font-size: 14px; color: #f1f5f9; }
+.item-card .sub { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+.item-card .del-btn { background: #ef4444; border: none; color: white; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 12px; flex-shrink: 0; }
+.item-card .del-btn:hover { background: #dc2626; }
+
+.add-btn { background: #22c55e; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; }
+.add-btn:hover { background: #16a34a; }
+
+.add-form { background: #0f172a; border-radius: 10px; padding: 14px; margin-bottom: 14px; display: none; }
+.add-form.open { display: block; }
+.add-form input, .add-form select, .add-form textarea { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; font-size: 14px; }
+.add-form label { font-size: 12px; color: #94a3b8; display: block; margin-bottom: 4px; }
+.add-form .save-btn { background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; }
+.add-form .save-btn:hover { background: #2563eb; }
+
+.empty-note { color: #64748b; font-size: 13px; text-align: center; padding: 20px 0; }
+.q-type-badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: bold; }
+.q-type-text { background: #3b82f6; }
+.q-type-choice { background: #f59e0b; }
+.q-type-number { background: #8b5cf6; }
+
+.tol-row { display: flex; gap: 8px; }
+.tol-row > div { flex: 1; }
+.tolerance-badge { color: #fbbf24; font-size: 10px; margin-right: 6px; }
+
+.users-box { background: #1e293b; border-radius: 8px; padding: 10px; max-height: 160px; overflow-y: auto; margin-bottom: 8px; }
+.users-box label.user-check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #e2e8f0; padding: 4px 0; cursor: pointer; }
+.users-box label.user-check input { width: auto; margin: 0; }
+.lock-btn { background: #f59e0b; border: none; color: white; border-radius: 6px; width: 26px; height: 26px; cursor: pointer; font-size: 12px; flex-shrink: 0; }
+.lock-btn:hover { background: #d97706; }
+.lock-btn.restricted { background: #a855f7; }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: #1e293b; border-radius: 14px; padding: 24px; width: 90%; max-width: 420px; max-height: 80vh; overflow-y: auto; }
+.modal-box h3 { color: #60a5fa; margin-bottom: 12px; font-size: 16px; }
+.modal-box .hint { color: #64748b; font-size: 12px; margin-bottom: 10px; }
+.modal-close-row { display: flex; gap: 8px; margin-top: 10px; }
+.modal-close-row button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.modal-save { background: #3b82f6; color: white; }
+.modal-save:hover { background: #2563eb; }
+.modal-cancel { background: #64748b; color: white; }
+.modal-cancel:hover { background: #475569; }
+
+.defect-tag { background: #1e293b; padding: 2px 10px; border-radius: 20px; font-size: 11px; color: #fbbf24; display: inline-block; margin: 2px; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>🧩 إدارة المراحل والموديلات والأسئلة</h1>
+<div class="nav-links">
+<a href="admin.html">📊 لوحة القراءات</a>
+<a href="submissions.html">📄 سجلات الفورمات</a>
+<a href="defects-admin.html">🔧 إدارة العيوب</a>
+<a href="admin-users.html">👥 إدارة الادمن</a>
+<span id="adminEmail" style="color:#94a3b8; font-size:13px;"></span>
+<button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
+</div>
+</div>
+
+<div class="board">
+
+<!-- المراحل -->
+<div class="panel">
+<h2>🏭 المراحل على خط الإنتاج <button class="add-btn" id="toggleStageForm">+ إضافة مرحلة</button></h2>
+<div class="add-form" id="stageForm">
+<label>اسم المرحلة</label>
+<input type="text" id="newStageName" placeholder="مثال: مرحلة الثني" />
+<label>رقم الخط (اختياري)</label>
+<input type="text" id="newStageLine" placeholder="مثال: L1" />
+<label>تخصيص المرحلة لفنيين معينين (اختياري)</label>
+<div class="hint">سيبها فاضية عشان المرحلة تظهر لكل الفنيين، أو اختر فنيين معينين عشان تظهر لهم بس حصريًا</div>
+<div class="users-box" id="newStageUsersBox"><div class="empty-note">⏳ جاري تحميل الفنيين...</div></div>
+<button class="save-btn" id="saveStageBtn">💾 حفظ المرحلة</button>
+</div>
+<div id="stagesList"><div class="empty-note">⏳ جاري التحميل...</div></div>
+</div>
+
+<!-- مودال إدارة صلاحيات المرحلة -->
+<div class="modal-overlay" id="stageAccessModal">
+<div class="modal-box">
+<h3 id="stageAccessTitle">🔒 صلاحيات الدخول للمرحلة</h3>
+<div class="hint">سيب الكل فاضي عشان المرحلة تفضل ظاهرة لكل الفنيين</div>
+<div class="users-box" id="stageAccessUsersBox"></div>
+<div class="modal-close-row">
+<button class="modal-save" id="stageAccessSaveBtn">💾 حفظ</button>
+<button class="modal-cancel" id="stageAccessCancelBtn">إلغاء</button>
+</div>
+</div>
+</div>
+
+<!-- الموديلات -->
+<div class="panel" id="formsPanel" style="display:none;">
+<h2>📦 الموديلات / الفورمات <button class="add-btn" id="toggleFormForm">+ إضافة موديل</button></h2>
+<div class="add-form" id="formForm">
+<label>اسم الموديل / الفورم</label>
+<input type="text" id="newFormName" placeholder="مثال: Back panel 310" />
+<label>رقم البارت (اختياري)</label>
+<input type="text" id="newFormPartNo" placeholder="مثال: 310" />
+<button class="save-btn" id="saveFormBtn">💾 حفظ الموديل</button>
+</div>
+<div id="formsList"><div class="empty-note">اختر مرحلة أولاً</div></div>
+
+<!-- عيوب المرحلة -->
+<h2 style="margin-top:16px;">⚠️ عيوب المرحلة <button class="add-btn" id="toggleDefectTypeForm">+ إضافة عيب</button></h2>
+<div class="add-form" id="defectTypeForm">
+<label>نوع العيب</label>
+<input type="text" id="newDefectType" placeholder="مثال: خدوش, انحراف, لحام غير مكتمل..." />
+<button class="save-btn" id="saveDefectTypeBtn">💾 حفظ</button>
+</div>
+<div id="defectTypesList"><div class="empty-note">اختر مرحلة لعرض العيوب الخاصة بها</div></div>
+</div>
+
+<!-- الأسئلة -->
+<div class="panel" id="questionsPanel" style="display:none;">
+<h2>❓ أسئلة الفورم <button class="add-btn" id="toggleQuestionForm">+ إضافة سؤال</button></h2>
+<div class="add-form" id="questionForm">
+<label>نص السؤال</label>
+<input type="text" id="newQuestionText" placeholder="مثال: هل يوجد خدوش؟" />
+<label>طريقة الإجابة</label>
+<select id="newQuestionType">
+<option value="choice">اختيار (Choice)</option>
+<option value="text">نص (Text)</option>
+<option value="number">رقم (Number)</option>
+</select>
+<div id="optionsWrapper">
+<label>الاختيارات (افصل بينها بفاصلة ,)</label>
+<input type="text" id="newQuestionOptions" placeholder="مثال: سليم, تالف, غير منطبق" value="OK, NOK, N/A" />
+</div>
+<div id="toleranceWrapper" style="display:none;">
+<label>التولورانس (اختياري - للأسئلة الرقمية)</label>
+<div class="tol-row">
+<div><label style="font-size:11px;">القيمة المطلوبة</label><input type="number" step="0.01" id="newQuestionTarget" placeholder="مثال: 1606" /></div>
+<div><label style="font-size:11px;">± التولورانس</label><input type="number" step="0.01" id="newQuestionTolerance" placeholder="مثال: 0.5" /></div>
+</div>
+</div>
+<button class="save-btn" id="saveQuestionBtn">💾 حفظ السؤال</button>
+</div>
+<div id="questionsList"><div class="empty-note">اختر موديل/فورم أولاً</div></div>
+</div>
+
+</div>
+</div>
+
+<script>
+const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let selectedStageId = null;
+let selectedFormId = null;
+let techniciansList = [];
+let stageAccessTargetId = null;
+let selectedDefectStageId = null;
+
+async function checkAuth() {
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) { window.location.href = 'index.html'; return; }
+  const { data: profile } = await client.from('profiles').select('role').eq('id', user.id).single();
+  if (!profile || profile.role !== 'admin') { window.location.href = 'index.html'; return; }
+  document.getElementById('adminEmail').textContent = user.email;
+  await loadTechnicians();
+  loadStages();
+}
+checkAuth();
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await client.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+async function loadTechnicians() {
+  const { data, error } = await client.from('profiles').select('id, email').eq('role', 'technician');
+  techniciansList = (!error && data) ? data : [];
+  renderUsersBox('newStageUsersBox', []);
+}
+
+function renderUsersBox(containerId, checkedIds) {
+  const box = document.getElementById(containerId);
+  if (!techniciansList || techniciansList.length === 0) {
+    box.innerHTML = `<div class="empty-note">لا يوجد فنيين مسجلين بعد</div>`;
+    return;
+  }
+  box.innerHTML = techniciansList.map(t => `
+    <label class="user-check">
+      <input type="checkbox" value="${t.id}" ${checkedIds.includes(t.id) ? 'checked' : ''} />
+      ${t.email || t.id}
+    </label>
+  `).join('');
+}
+
+function getCheckedUserIds(containerId) {
+  return Array.from(document.querySelectorAll('#' + containerId + ' input:checked')).map(el => el.value);
+}
+
+// toggles
+document.getElementById('toggleStageForm').addEventListener('click', () => {
+  document.getElementById('stageForm').classList.toggle('open');
+});
+document.getElementById('toggleFormForm').addEventListener('click', () => {
+  document.getElementById('formForm').classList.toggle('open');
+});
+document.getElementById('toggleQuestionForm').addEventListener('click', () => {
+  document.getElementById('questionForm').classList.toggle('open');
+});
+document.getElementById('toggleDefectTypeForm').addEventListener('click', () => {
+  if (!selectedStageId) { alert('⚠️ اختر مرحلة أولاً من القائمة'); return; }
+  document.getElementById('defectTypeForm').classList.toggle('open');
+});
+document.getElementById('newQuestionType').addEventListener('change', (e) => {
+  document.getElementById('optionsWrapper').style.display = e.target.value === 'choice' ? 'block' : 'none';
+  document.getElementById('toleranceWrapper').style.display = e.target.value === 'number' ? 'block' : 'none';
+});
+
+// ---------- المراحل ----------
+async function loadStages() {
+  const { data, error } = await client.from('stages').select('*').order('created_at', { ascending: true });
+  const { data: accessRows } = await client.from('stage_technicians').select('stage_id, technician_id');
+  const list = document.getElementById('stagesList');
+  if (error) { list.innerHTML = `<div class="empty-note">❌ فشل التحميل</div>`; return; }
+  if (!data || data.length === 0) { list.innerHTML = `<div class="empty-note">📭 مفيش مراحل لسه، ضيف أول مرحلة</div>`; return; }
+  list.innerHTML = '';
+  data.forEach(s => {
+    const restrictedCount = (accessRows || []).filter(r => r.stage_id === s.id).length;
+    const div = document.createElement('div');
+    div.className = 'item-card' + (s.id === selectedStageId ? ' selected' : '');
+    div.innerHTML = `<div><div class="title">${s.name}</div><div class="sub">${s.line_no ? 'خط: ' + s.line_no : ''} ${restrictedCount > 0 ? '· 🔒 مخصصة لـ ' + restrictedCount + ' فني' : '· 🌐 ظاهرة للكل'}</div></div>
+      <button class="lock-btn ${restrictedCount > 0 ? 'restricted' : ''}" data-id="${s.id}" title="إدارة صلاحيات الدخول">🔒</button>
+      <button class="del-btn" data-id="${s.id}">🗑</button>`;
+    div.querySelector('.title, .sub').parentElement.addEventListener('click', (e) => {
+      if (e.target.classList.contains('del-btn') || e.target.classList.contains('lock-btn')) return;
+      selectStage(s.id, s.name);
+    });
+    div.querySelector('.lock-btn').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      openStageAccessModal(s.id, s.name, (accessRows || []).filter(r => r.stage_id === s.id).map(r => r.technician_id));
+    });
+    div.querySelector('.del-btn').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('هل تريد حذف المرحلة "' + s.name + '"؟ سيتم حذف كل الموديلات والأسئلة التابعة لها.')) return;
+      await client.from('stages').delete().eq('id', s.id);
+      if (selectedStageId === s.id) { selectedStageId = null; document.getElementById('formsPanel').style.display = 'none'; document.getElementById('questionsPanel').style.display = 'none'; }
+      loadStages();
+    });
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('saveStageBtn').addEventListener('click', async () => {
+  const name = document.getElementById('newStageName').value.trim();
+  const line = document.getElementById('newStageLine').value.trim();
+  if (!name) { alert('⚠️ اكتب اسم المرحلة'); return; }
+  const checkedIds = getCheckedUserIds('newStageUsersBox');
+  const { data: newStage, error } = await client.from('stages').insert([{ name, line_no: line || null }]).select().single();
+  if (error) { alert('❌ ' + error.message); return; }
+  if (checkedIds.length > 0) {
+    const rows = checkedIds.map(tid => ({ stage_id: newStage.id, technician_id: tid }));
+    await client.from('stage_technicians').insert(rows);
+  }
+  document.getElementById('newStageName').value = '';
+  document.getElementById('newStageLine').value = '';
+  renderUsersBox('newStageUsersBox', []);
+  document.getElementById('stageForm').classList.remove('open');
+  loadStages();
+});
+
+// مودال صلاحيات المرحلة
+function openStageAccessModal(stageId, stageName, checkedIds) {
+  stageAccessTargetId = stageId;
+  document.getElementById('stageAccessTitle').textContent = '🔒 صلاحيات الدخول - ' + stageName;
+  renderUsersBox('stageAccessUsersBox', checkedIds);
+  document.getElementById('stageAccessModal').classList.add('open');
+}
+
+document.getElementById('stageAccessCancelBtn').addEventListener('click', () => {
+  document.getElementById('stageAccessModal').classList.remove('open');
+});
+
+document.getElementById('stageAccessSaveBtn').addEventListener('click', async () => {
+  const checkedIds = getCheckedUserIds('stageAccessUsersBox');
+  await client.from('stage_technicians').delete().eq('stage_id', stageAccessTargetId);
+  if (checkedIds.length > 0) {
+    const rows = checkedIds.map(tid => ({ stage_id: stageAccessTargetId, technician_id: tid }));
+    const { error } = await client.from('stage_technicians').insert(rows);
+    if (error) { alert('❌ ' + error.message); return; }
+  }
+  document.getElementById('stageAccessModal').classList.remove('open');
+  loadStages();
+});
+
+function selectStage(id, name) {
+  selectedStageId = id;
+  selectedDefectStageId = id;
+  selectedFormId = null;
+  document.getElementById('formsPanel').style.display = 'block';
+  document.getElementById('formsPanel').querySelector('h2').firstChild.textContent = '📦 موديلات مرحلة: ' + name + ' ';
+  document.getElementById('questionsPanel').style.display = 'none';
+  loadStages();
+  loadForms();
+  loadDefectTypes(id);
+}
+
+// ---------- عيوب المرحلة ----------
+async function loadDefectTypes(stageId) {
+  const list = document.getElementById('defectTypesList');
+  if (!stageId) { list.innerHTML = `<div class="empty-note">اختر مرحلة لعرض العيوب الخاصة بها</div>`; return; }
+  const { data, error } = await client.from('stage_defects').select('*').eq('stage_id', stageId).order('created_at');
+  if (error || !data || data.length === 0) {
+    list.innerHTML = `<div class="empty-note">📭 لا توجد عيوب مسجلة لهذه المرحلة</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  data.forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    div.innerHTML = `<div><div class="title">${d.defect_name}</div></div>
+      <button class="del-btn" data-id="${d.id}">🗑</button>`;
+    div.querySelector('.del-btn').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('حذف نوع العيب؟')) return;
+      await client.from('stage_defects').delete().eq('id', d.id);
+      loadDefectTypes(stageId);
+    });
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('saveDefectTypeBtn').addEventListener('click', async () => {
+  const stageId = selectedStageId;
+  if (!stageId) { alert('⚠️ اختر مرحلة أولاً'); return; }
+  const name = document.getElementById('newDefectType').value.trim();
+  if (!name) { alert('⚠️ اكتب نوع العيب'); return; }
+  const { error } = await client.from('stage_defects').insert([{ stage_id: stageId, defect_name: name }]);
+  if (error) { alert('❌ ' + error.message); return; }
+  document.getElementById('newDefectType').value = '';
+  document.getElementById('defectTypeForm').classList.remove('open');
+  loadDefectTypes(stageId);
+});
+
+// ---------- الموديلات ----------
+async function loadForms() {
+  const list = document.getElementById('formsList');
+  if (!selectedStageId) { list.innerHTML = `<div class="empty-note">اختر مرحلة أولاً</div>`; return; }
+  const { data, error } = await client.from('forms').select('*').eq('stage_id', selectedStageId).order('created_at', { ascending: true });
+  if (error) { list.innerHTML = `<div class="empty-note">❌ فشل التحميل</div>`; return; }
+  if (!data || data.length === 0) { list.innerHTML = `<div class="empty-note">📭 مفيش موديلات لسه في المرحلة دي</div>`; return; }
+  list.innerHTML = '';
+  data.forEach(f => {
+    const div = document.createElement('div');
+    div.className = 'item-card' + (f.id === selectedFormId ? ' selected' : '');
+    div.innerHTML = `<div><div class="title">${f.name}</div><div class="sub">${f.part_no ? 'بارت: ' + f.part_no : ''}</div></div><button class="del-btn" data-id="${f.id}">🗑</button>`;
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('del-btn')) return;
+      selectForm(f.id, f.name);
+    });
+    div.querySelector('.del-btn').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('هل تريد حذف الموديل "' + f.name + '"؟ سيتم حذف كل الأسئلة التابعة له.')) return;
+      await client.from('forms').delete().eq('id', f.id);
+      if (selectedFormId === f.id) { selectedFormId = null; document.getElementById('questionsPanel').style.display = 'none'; }
+      loadForms();
+    });
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('saveFormBtn').addEventListener('click', async () => {
+  if (!selectedStageId) { alert('⚠️ اختر مرحلة أولاً'); return; }
+  const name = document.getElementById('newFormName').value.trim();
+  const partNo = document.getElementById('newFormPartNo').value.trim();
+  if (!name) { alert('⚠️ اكتب اسم الموديل'); return; }
+  const { error } = await client.from('forms').insert([{ stage_id: selectedStageId, name, part_no: partNo || null }]);
+  if (error) { alert('❌ ' + error.message); return; }
+  document.getElementById('newFormName').value = '';
+  document.getElementById('newFormPartNo').value = '';
+  document.getElementById('formForm').classList.remove('open');
+  loadForms();
+});
+
+function selectForm(id, name) {
+  selectedFormId = id;
+  document.getElementById('questionsPanel').style.display = 'block';
+  document.getElementById('questionsPanel').querySelector('h2').firstChild.textContent = '❓ أسئلة موديل: ' + name + ' ';
+  loadForms();
+  loadQuestions();
+}
+
+// ---------- الأسئلة ----------
+function typeLabel(t) {
+  if (t === 'choice') return '<span class="q-type-badge q-type-choice">اختيار</span>';
+  if (t === 'number') return '<span class="q-type-badge q-type-number">رقم</span>';
+  return '<span class="q-type-badge q-type-text">نص</span>';
+}
+
+async function loadQuestions() {
+  const list = document.getElementById('questionsList');
+  if (!selectedFormId) { list.innerHTML = `<div class="empty-note">اختر موديل/فورم أولاً</div>`; return; }
+  const { data, error } = await client.from('form_questions').select('*').eq('form_id', selectedFormId).order('created_at', { ascending: true });
+  if (error) { list.innerHTML = `<div class="empty-note">❌ فشل التحميل</div>`; return; }
+  if (!data || data.length === 0) { list.innerHTML = `<div class="empty-note">📭 مفيش أسئلة لسه في الفورم ده</div>`; return; }
+  list.innerHTML = '';
+  data.forEach(q => {
+    const div = document.createElement('div');
+    div.className = 'item-card';
+    const opts = q.options && Array.isArray(q.options) ? q.options.join(' / ') : '';
+    let tolText = '';
+    if (q.answer_type === 'number' && (q.target_value !== null && q.target_value !== undefined)) {
+      tolText = `<span class="tolerance-badge">🎯 ${q.target_value}${q.tolerance ? ' ± ' + q.tolerance : ''}</span>`;
+    }
+    div.innerHTML = `<div><div class="title">${q.question_text} ${typeLabel(q.answer_type)}</div><div class="sub">${opts}${tolText}</div></div><button class="del-btn" data-id="${q.id}">🗑</button>`;
+    div.querySelector('.del-btn').addEventListener('click', async () => {
+      if (!confirm('هل تريد حذف هذا السؤال؟')) return;
+      await client.from('form_questions').delete().eq('id', q.id);
+      loadQuestions();
+    });
+    list.appendChild(div);
+  });
+}
+
+document.getElementById('saveQuestionBtn').addEventListener('click', async () => {
+  if (!selectedFormId) { alert('⚠️ اختر موديل/فورم أولاً'); return; }
+  const text = document.getElementById('newQuestionText').value.trim();
+  const type = document.getElementById('newQuestionType').value;
+  if (!text) { alert('⚠️ اكتب نص السؤال'); return; }
+  let options = null;
+  let targetValue = null;
+  let tolerance = null;
+  if (type === 'choice') {
+    const raw = document.getElementById('newQuestionOptions').value.trim();
+    options = raw.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    if (options.length < 2) { alert('⚠️ اكتب اختيارين على الأقل مفصولين بفاصلة'); return; }
+  }
+  if (type === 'number') {
+    const t = document.getElementById('newQuestionTarget').value;
+    const tol = document.getElementById('newQuestionTolerance').value;
+    targetValue = t !== '' ? parseFloat(t) : null;
+    tolerance = tol !== '' ? parseFloat(tol) : null;
+  }
+  const { error } = await client.from('form_questions').insert([{ form_id: selectedFormId, question_text: text, answer_type: type, options, target_value: targetValue, tolerance }]);
+  if (error) { alert('❌ ' + error.message); return; }
+  document.getElementById('newQuestionText').value = '';
+  document.getElementById('newQuestionOptions').value = 'OK, NOK, N/A';
+  document.getElementById('newQuestionTarget').value = '';
+  document.getElementById('newQuestionTolerance').value = '';
+  document.getElementById('questionForm').classList.remove('open');
+  loadQuestions();
+});
+</script>
+</body>
+</html>

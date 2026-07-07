@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>تسجيل العيوب - الفني</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+body { background: #0f172a; padding: 20px; color: #f1f5f9; }
+.container { max-width: 1000px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+.header span { color: #94a3b8; }
+.header .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+.header .logout-btn:hover { background: #dc2626; }
+.header .nav-link { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.header .nav-link:hover { background: #475569; }
+.header .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+.view { background: #1e293b; border-radius: 16px; padding: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.view h1 { text-align: center; color: #60a5fa; margin-bottom: 24px; font-size: 24px; }
+.back-btn { background: #64748b; color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; margin-bottom: 16px; font-weight: bold; }
+.back-btn:hover { background: #475569; }
+
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.card { background: #334155; padding: 24px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; }
+.card:hover { background: #3d4c66; transform: translateY(-3px); }
+.card .icon { font-size: 36px; margin-bottom: 8px; }
+.card .name { font-weight: bold; font-size: 16px; color: #f1f5f9; }
+.card .sub { color: #94a3b8; font-size: 12px; margin-top: 4px; }
+.empty-note { color: #64748b; text-align: center; padding: 40px; font-size: 15px; grid-column: 1/-1; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-group { background: #334155; padding: 10px 14px; border-radius: 10px; display: flex; flex-direction: column; }
+.form-group label { font-size: 12px; color: #94a3b8; margin-bottom: 4px; font-weight: 600; }
+.form-group input, .form-group select, .form-group textarea { padding: 8px 12px; border: none; border-radius: 6px; background: #1e293b; color: #f1f5f9; font-size: 14px; }
+.form-group input:focus, .form-group select:focus { outline: 2px solid #3b82f6; }
+.form-group textarea { min-height: 80px; resize: vertical; }
+.btn-submit { grid-column: 1 / -1; padding: 14px; background: #22c55e; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+.btn-submit:hover { background: #16a34a; }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-scan { background: #8b5cf6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.btn-scan:hover { background: #7c3aed; }
+
+.msg { padding: 12px; border-radius: 8px; text-align: center; margin-top: 16px; display: none; font-weight: bold; }
+.msg-success { background: #22c55e; color: white; }
+.msg-error { background: #ef4444; color: white; }
+
+.scanner-container { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 200; align-items: center; justify-content: center; flex-direction: column; }
+.scanner-container.open { display: flex; }
+.scanner-container video { max-width: 100%; max-height: 80vh; border-radius: 12px; }
+.scanner-container .close-scanner { background: #ef4444; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 18px; cursor: pointer; margin-top: 16px; }
+.scanner-container .close-scanner:hover { background: #dc2626; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<span>👤 <span id="userEmail">فني</span></span>
+<div class="header-actions">
+<a href="technician.html" class="nav-link">📋 تسجيل قراءات</a>
+<button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
+</div>
+</div>
+
+<!-- الشاشة الرئيسية -->
+<div class="view" id="mainView">
+<h1>🔧 تسجيل العيوب</h1>
+<div class="cards-grid">
+  <div class="card" id="defectCard">
+    <div class="icon">⚠️</div>
+    <div class="name">تسجيل عيب جديد</div>
+    <div class="sub">سجل عيب في منتج معين</div>
+  </div>
+  <div class="card" id="firstOffCard">
+    <div class="icon">✅</div>
+    <div class="name">First Off</div>
+    <div class="sub">تسجيل أول قطعة منتجة</div>
+  </div>
+</div>
+</div>
+
+<!-- شاشة اختيار المرحلة لتسجيل العيوب -->
+<div class="view" id="stageSelectView" style="display:none;">
+<button class="back-btn" id="backToMain">⬅ رجوع</button>
+<h1>🏭 اختر المرحلة</h1>
+<div class="cards-grid" id="defectStages"><div class="empty-note">⏳ جاري التحميل...</div></div>
+</div>
+
+<!-- شاشة تسجيل العيب -->
+<div class="view" id="defectFormView" style="display:none;">
+<button class="back-btn" id="backToStages">⬅ رجوع للمراحل</button>
+<h1 id="defectFormTitle">⚠️ تسجيل عيب</h1>
+<form id="defectForm">
+<div class="form-grid">
+  <div class="form-group" style="grid-column:1/2;">
+    <label>🏷️ السيريال <button type="button" class="btn-scan" id="scanSerialBtn">📷 سكان</button></label>
+    <input type="text" id="defectSerial" placeholder="امسح الباركود أو اكتب السيريال" required />
+  </div>
+  <div class="form-group" style="grid-column:2/3;">
+    <label>⚠️ نوع العيب</label>
+    <select id="defectType" required>
+      <option value="">اختر نوع العيب...</option>
+    </select>
+  </div>
+  <div class="form-group" style="grid-column:1/3;">
+    <label>📝 وصف العيب (اختياري)</label>
+    <textarea id="defectDescription" placeholder="تفاصيل إضافية عن العيب..."></textarea>
+  </div>
+</div>
+<button type="submit" class="btn-submit" id="defectSubmitBtn">✅ تسجيل العيب</button>
+</form>
+<div id="defectMsg" class="msg"></div>
+</div>
+
+<!-- ماسح الباركود -->
+<div class="scanner-container" id="scannerContainer">
+  <video id="scannerVideo"></video>
+  <button class="close-scanner" id="closeScanner">✖ إلغاء</button>
+</div>
+
+</div>
+
+<script>
+const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
+const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let selectedStage = null;
+let defectTypesMap = {};
+
+async function checkAuth() {
+  const { data: { user } } = await client.auth.getUser();
+  if (!user) { window.location.href = 'index.html'; return; }
+  currentUser = user;
+  document.getElementById('userEmail').textContent = user.email;
+}
+checkAuth();
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await client.auth.signOut();
+  window.location.href = 'index.html';
+});
+
+function showView(view) {
+  document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
+  document.getElementById('stageSelectView').style.display = view === 'stageSelect' ? 'block' : 'none';
+  document.getElementById('defectFormView').style.display = view === 'defectForm' ? 'block' : 'none';
+}
+
+document.getElementById('defectCard').addEventListener('click', () => {
+  showView('stageSelect');
+  loadDefectStages();
+});
+
+document.getElementById('firstOffCard').addEventListener('click', () => {
+  alert('🚧 ميزة First Off قيد التطوير');
+});
+
+document.getElementById('backToMain').addEventListener('click', () => showView('main'));
+document.getElementById('backToStages').addEventListener('click', () => showView('stageSelect'));
+
+async function loadDefectStages() {
+  const el = document.getElementById('defectStages');
+  const { data, error } = await client.from('stages').select('*').order('created_at');
+  if (error || !data || data.length === 0) {
+    el.innerHTML = `<div class="empty-note">📭 لا توجد مراحل متاحة</div>`;
+    return;
+  }
+  el.innerHTML = '';
+  data.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `<div class="icon">🏭</div><div class="name">${s.name}</div><div class="sub">${s.line_no || ''}</div>`;
+    div.addEventListener('click', () => {
+      selectedStage = s;
+      document.getElementById('defectFormTitle').textContent = `⚠️ تسجيل عيب - ${s.name}`;
+      showView('defectForm');
+      loadDefectTypes(s.id);
+    });
+    el.appendChild(div);
+  });
+}
+
+async function loadDefectTypes(stageId) {
+  const select = document.getElementById('defectType');
+  select.innerHTML = '<option value="">اختر نوع العيب...</option>';
+  
+  const { data, error } = await client.from('stage_defects').select('defect_name').eq('stage_id', stageId).order('created_at');
+  const types = (!error && data) ? data.map(d => d.defect_name) : [];
+  
+  if (types.length === 0) {
+    const fallbackTypes = ['مقاس غير مطابق', 'جودة سطح', 'عيوب تجميع', 'عيوب مادة', 'أخرى'];
+    fallbackTypes.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t;
+      select.appendChild(o);
+    });
+  } else {
+    types.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t;
+      o.textContent = t;
+      select.appendChild(o);
+    });
+  }
+}
+
+document.getElementById('scanSerialBtn').addEventListener('click', () => {
+  document.getElementById('scannerContainer').classList.add('open');
+  startScanner();
+});
+
+document.getElementById('closeScanner').addEventListener('click', () => {
+  stopScanner();
+  document.getElementById('scannerContainer').classList.remove('open');
+});
+
+function startScanner() {
+  const video = document.getElementById('scannerVideo');
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
+        video.srcObject = stream;
+        video.play();
+        Quagga.init({
+          inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: video
+          },
+          decoder: {
+            readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader", "code_93_reader", "upc_reader"]
+          }
+        }, (err) => {
+          if (err) {
+            console.error(err);
+            alert('❌ فشل تشغيل الماسح');
+            return;
+          }
+          Quagga.start();
+        });
+        
+        Quagga.onDetected((result) => {
+          const code = result.codeResult.code;
+          if (code) {
+            stopScanner();
+            document.getElementById('scannerContainer').classList.remove('open');
+            document.getElementById('defectSerial').value = code;
+          }
+        });
+      })
+      .catch(err => {
+        alert('❌ تعذر الوصول إلى الكاميرا: ' + err.message);
+      });
+  }
+}
+
+function stopScanner() {
+  Quagga.stop();
+  const video = document.getElementById('scannerVideo');
+  if (video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
+  }
+}
+
+document.getElementById('defectForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('defectSubmitBtn');
+  const msg = document.getElementById('defectMsg');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري التسجيل...';
+  msg.style.display = 'none';
+  
+  const serial = document.getElementById('defectSerial').value.trim();
+  const defectType = document.getElementById('defectType').value;
+  const description = document.getElementById('defectDescription').value.trim();
+  
+  if (!serial) {
+    msg.textContent = '⚠️ يرجى إدخال السيريال';
+    msg.className = 'msg msg-error';
+    msg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '✅ تسجيل العيب';
+    return;
+  }
+  if (!defectType) {
+    msg.textContent = '⚠️ يرجى اختيار نوع العيب';
+    msg.className = 'msg msg-error';
+    msg.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '✅ تسجيل العيب';
+    return;
+  }
+  
+  try {
+    const { data, error } = await client.from('defects').insert([{
+      serial_number: serial,
+      stage_id: selectedStage.id,
+      form_id: null,
+      technician_id: currentUser.id,
+      technician_email: currentUser.email,
+      defect_type: defectType,
+      description: description || null,
+      status: 'pending'
+    }]);
+    
+    if (error) throw error;
+    
+    msg.textContent = '✅ تم تسجيل العيب بنجاح! سيتم مراجعته من قبل الأدمن.';
+    msg.className = 'msg msg-success';
+    msg.style.display = 'block';
+    document.getElementById('defectSerial').value = '';
+    document.getElementById('defectDescription').value = '';
+    document.getElementById('defectType').value = '';
+  } catch (err) {
+    msg.textContent = '❌ فشل التسجيل: ' + err.message;
+    msg.className = 'msg msg-error';
+    msg.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✅ تسجيل العيب';
+  }
+});
+</script>
+</body>
+</html>
