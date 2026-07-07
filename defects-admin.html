@@ -36,6 +36,8 @@ tr:hover td { background: #2d3a4f; }
 .btn-action.reject { background: #ef4444; }
 .btn-action.reject:hover { background: #dc2626; }
 .loading, .no-data { text-align: center; padding: 40px; color: #94a3b8; }
+.btn-danger { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-danger:hover { background: #dc2626; }
 
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
 .modal-overlay.open { display: flex; }
@@ -61,7 +63,7 @@ tr:hover td { background: #2d3a4f; }
 <a href="admin.html">📊 لوحة التحكم</a>
 <a href="models-manager.html">🧩 إدارة الموديلات</a>
 <a href="submissions.html">📄 سجلات الفورمات</a>
-<a href="admin-users.html">👥 إدارة الادمن</a>
+<a href="admin-users.html">👥 إدارة المستخدمين</a>
 <button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
 </div>
 </div>
@@ -72,6 +74,7 @@ tr:hover td { background: #2d3a4f; }
 <input type="text" id="filterSerial" placeholder="السيريال" />
 <button id="applyFilter">🔍 تصفية</button>
 <button id="resetFilter" style="background:#64748b;">↺ إعادة تعيين</button>
+<button class="btn-danger" id="deleteAllDefects">🗑 مسح كل العيوب</button>
 </div>
 
 <div class="table-wrapper">
@@ -261,6 +264,26 @@ document.getElementById('resetFilter').addEventListener('click', () => {
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterSerial').value = '';
   renderDefects(allDefects);
+});
+
+// ============ مسح كل العيوب ============
+document.getElementById('deleteAllDefects').addEventListener('click', async () => {
+  const count = allDefects.length;
+  if (count === 0) {
+    alert('⚠️ لا توجد عيوب للمسح');
+    return;
+  }
+  
+  if (!confirm(`⚠️ هل أنت متأكد من مسح كل العيوب المسجلة (${count} عيب)؟ هذا الإجراء لا يمكن التراجع عنه!`)) return;
+  
+  try {
+    const { error } = await client.from('defects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw error;
+    alert(`✅ تم مسح ${count} عيب/عيوب بنجاح`);
+    loadDefects();
+  } catch (err) {
+    alert('❌ فشل المسح: ' + err.message);
+  }
 });
 </script>
 </body>
