@@ -37,8 +37,16 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 .user-form .actions { grid-column: 1/-1; display: flex; gap: 10px; margin-top: 10px; }
 .btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
 .btn-primary:hover { background: #2563eb; }
+.btn-reset { background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-reset:hover { background: #475569; }
+
 .temp-password { background: #1e293b; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
 .temp-password .pass { color: #fbbf24; font-size: 18px; font-weight: bold; direction: ltr; }
+
+.filter-bar { background: #0f172a; padding: 12px; border-radius: 10px; margin-bottom: 10px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.filter-bar input { flex: 1; padding: 10px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; min-width: 200px; }
+.filter-bar select { padding: 10px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
+.filter-bar button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -84,6 +92,21 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
     </div>
   </div>
 </div>
+</div>
+
+<div class="panel">
+<h2>🔍 بحث في المستخدمين</h2>
+<div class="filter-bar">
+  <input type="text" id="searchUserInput" placeholder="🔍 ابحث بالبريد الإلكتروني...">
+  <select id="searchUserRole">
+    <option value="">كل الأدوار</option>
+    <option value="admin">أدمن</option>
+    <option value="technician">فني</option>
+  </select>
+  <button class="btn-primary" id="searchUserBtn">🔍 بحث</button>
+  <button class="btn-reset" id="resetUserSearch">↺ إعادة تعيين</button>
+</div>
+<div id="searchResults"></div>
 </div>
 
 <div class="panel">
@@ -164,20 +187,13 @@ function renderUsers() {
           <div class="name">${user.email || 'بدون بريد'} ${isCurrent ? '⭐ (أنت)' : ''}</div>
           <div class="email">${roleName}</div>
         </div>
-        ${!isCurrent ? `<button class="btn-edit" data-id="${user.id}">✏️ تعديل الصلاحيات</button>` : ''}
       </div>
     `;
   });
   container.innerHTML = html;
-  
-  document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', () => {
-      alert('🚧 ميزة تعديل الصلاحيات قيد التطوير');
-    });
-  });
 }
 
-// ============ إنشاء حساب جديد وإرسال بيانات الدخول ============
+// ============ إنشاء حساب جديد ============
 document.getElementById('createUserBtn').addEventListener('click', async () => {
   const email = document.getElementById('newUserEmail').value.trim();
   const role = document.getElementById('newUserRole').value;
@@ -201,12 +217,31 @@ document.getElementById('createUserBtn').addEventListener('click', async () => {
     
     if (error) throw error;
     
+    // انتظر شوية عشان الـ profile يتعمل
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // نعمل الـ profile يدوياً (لو ما اتعملش)
+    const { error: profileError } = await client
+      .from('profiles')
+      .upsert({ 
+        id: data.user.id, 
+        email: email, 
+        role: role 
+      });
+    
+    if (profileError) {
+      console.warn('Profile upsert warning:', profileError);
+    }
+    
     if (role === 'admin' && selectedStages.length > 0) {
       const rows = selectedStages.map(stageId => ({
         admin_id: data.user.id,
         stage_id: stageId
       }));
-      await client.from('admin_stages').insert(rows);
+      const { error: stageError } = await client.from('admin_stages').insert(rows);
+      if (stageError) {
+        console.warn('Stage assignment warning:', stageError);
+      }
     }
     
     document.getElementById('tempPasswordText').textContent = tempPassword;
@@ -231,6 +266,53 @@ function generateTempPassword() {
   }
   return password;
 }
+
+// ============ البحث في المستخدمين ============
+document.getElementById('searchUserBtn').addEventListener('click', () => {
+  const searchTerm = document.getElementById('searchUserInput').value.trim().toLowerCase();
+  const role = document.getElementById('searchUserRole').value;
+  
+  let filtered = allUsers;
+  if (searchTerm) {
+    filtered = filtered.filter(u => u.email && u.email.toLowerCase().includes(searchTerm));
+  }
+  if (role) {
+    filtered = filtered.filter(u => u.role === role);
+  }
+  
+  const container = document.getElementById('searchResults');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="hint">📭 لا توجد نتائج</div>`;
+    return;
+  }
+  
+  let html = '';
+  filtered.forEach(user => {
+    const roleName = user.role === 'admin' ? 'أدمن' : 'فني';
+    html += `
+      <div class="user-card">
+        <div class="info">
+          <div class="name">${user.email || 'بدون بريد'}</div>
+          <div class="email">${roleName}</div>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+});
+
+document.getElementById('resetUserSearch').addEventListener('click', () => {
+  document.getElementById('searchUserInput').value = '';
+  document.getElementById('searchUserRole').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+});
+
+// إضافة Enter key للبحث
+document.getElementById('searchUserInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    document.getElementById('searchUserBtn').click();
+  }
+});
 </script>
 </body>
 </html>
