@@ -16,6 +16,10 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .header-actions a { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
 .header-actions a:hover { background: #475569; }
+.btn-danger { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-danger:hover { background: #dc2626; }
+.btn-success { background: #22c55e; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-success:hover { background: #16a34a; }
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .stat-card { background: #1e293b; padding: 16px; border-radius: 12px; text-align: center; }
@@ -30,8 +34,6 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 .filter-bar .btn-filter:hover { background: #2563eb; }
 .filter-bar .btn-reset { background: #64748b; color: white; }
 .filter-bar .btn-reset:hover { background: #475569; }
-.filter-bar .btn-export { background: #22c55e; color: white; }
-.filter-bar .btn-export:hover { background: #16a34a; }
 
 .table-wrapper { overflow-x: auto; background: #1e293b; border-radius: 14px; padding: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1400px; }
@@ -55,9 +57,11 @@ tr:hover td { background: #2d3a4f; }
 <a href="models-manager.html">🧩 إدارة الموديلات</a>
 <a href="submissions.html">📄 سجلات الفورمات</a>
 <a href="defects-admin.html">🔧 إدارة العيوب</a>
-<a href="admin-users.html">👥 إدارة الادمن</a>
+<a href="admin-users.html">👥 إدارة المستخدمين</a>
 <span style="color:#94a3b8; margin-left:8px;" id="adminEmail">admin@company.com</span>
 <button class="refresh-btn" id="refreshBtn">🔄 تحديث</button>
+<button class="btn-success" id="exportAllExcel">📥 استخراج Excel</button>
+<button class="btn-danger" id="deleteAllData">🗑 مسح كل البيانات</button>
 <button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
 </div>
 </div>
@@ -77,7 +81,6 @@ tr:hover td { background: #2d3a4f; }
 <input type="text" id="filterTechnician" placeholder="اسم الفني" />
 <button class="btn-filter" id="applyFilter">🔍 تصفية</button>
 <button class="btn-reset" id="resetFilter">↺ إعادة تعيين</button>
-<button class="btn-export" id="exportBtn">📥 تصدير Excel</button>
 </div>
 
 <div class="table-wrapper">
@@ -291,31 +294,57 @@ document.getElementById('resetFilter').addEventListener('click', () => {
   renderTable(allData);
 });
 
-document.getElementById('exportBtn').addEventListener('click', () => {
-  const data = allData;
-  if (data.length === 0) {
+// ============ استخراج Excel ============
+document.getElementById('exportAllExcel').addEventListener('click', () => {
+  if (allData.length === 0) {
     alert('⚠️ لا توجد بيانات للتصدير');
     return;
   }
+  
   const headers = ['التاريخ', 'الوقت', 'الجزء', 'المنتج', 'الموديل', 'المرحلة', 'الخط', 'العامل', 'السيريال', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'الطول', 'العرض', 'القرار', 'الفني'];
   let csv = headers.join(',') + '\n';
-  data.forEach(d => {
+  
+  allData.forEach(d => {
+    const overall = getOverall(d);
     const row = [
       d.date || '', d.time || '', d.part_no || '', d.product || '', d.model || '',
       d.process || '', d.line_no || '', d.worker || '', d.serial_number || '',
       d.s1 || '', d.s2 || '', d.s3 || '', d.s4 || '', d.s5 || '', d.s6 || '',
       d.length || '', d.width || '',
-      getOverall(d),
+      overall,
       d.technician_email ? d.technician_email.split('@')[0] : ''
     ];
     csv += row.join(',') + '\n';
   });
+  
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `فحوصات_${new Date().toISOString().slice(0,10)}.csv`;
+  link.download = `كل_الفحوصات_${new Date().toISOString().slice(0,10)}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
+});
+
+// ============ مسح كل البيانات ============
+document.getElementById('deleteAllData').addEventListener('click', async () => {
+  const count = allData.length;
+  if (count === 0) {
+    alert('⚠️ لا توجد بيانات للمسح');
+    return;
+  }
+  
+  if (!confirm(`⚠️ هل أنت متأكد من مسح كل بيانات الفحوصات (${count} سجل)؟ هذا الإجراء لا يمكن التراجع عنه!`)) return;
+  
+  try {
+    const { error } = await client.from('inspections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw error;
+    
+    alert(`✅ تم مسح ${count} سجل بنجاح`);
+    await loadData();
+    await loadDefects();
+  } catch (err) {
+    alert('❌ فشل المسح: ' + err.message);
+  }
 });
 </script>
 </body>
