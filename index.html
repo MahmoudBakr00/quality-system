@@ -21,11 +21,28 @@ body { background: #0f172a; display: flex; justify-content: center; align-items:
 .register-link a { color: #60a5fa; text-decoration: none; cursor: pointer; }
 .register-link a:hover { text-decoration: underline; }
 .footer { text-align: center; color: #475569; margin-top: 20px; font-size: 12px; }
+
+/* تبويبات دخول / تسجيل */
+.tabs { display: flex; background: #0f172a; border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+.tabs button { flex: 1; padding: 10px; border: none; border-radius: 8px; background: transparent; color: #94a3b8; font-weight: bold; font-size: 14px; cursor: pointer; transition: 0.2s; }
+.tabs button.active { background: #3b82f6; color: white; }
+
+.login-container select { width: 100%; padding: 12px 16px; margin-bottom: 20px; border: none; border-radius: 8px; background: #334155; color: #f1f5f9; font-size: 16px; }
+.login-container select:focus { outline: 2px solid #3b82f6; }
+.success-msg { color: #4ade80; text-align: center; margin-top: 12px; font-size: 14px; }
+.hint-small { color: #64748b; font-size: 12px; margin: -14px 0 16px; }
 </style>
 </head>
 <body>
 <div class="login-container">
-<h2>🔐 تسجيل الدخول</h2>
+<h2 id="mainTitle">🔐 تسجيل الدخول</h2>
+
+<div class="tabs">
+  <button type="button" id="tabLogin" class="active">دخول</button>
+  <button type="button" id="tabRegister">تسجيل حساب جديد</button>
+</div>
+
+<!-- فورم الدخول -->
 <form id="loginForm">
 <label>البريد الإلكتروني</label>
 <input type="email" id="email" placeholder="example@company.com" required />
@@ -34,6 +51,28 @@ body { background: #0f172a; display: flex; justify-content: center; align-items:
 <button type="submit" id="loginBtn">دخول</button>
 <div id="errorMsg" class="error-msg"></div>
 </form>
+
+<!-- فورم التسجيل -->
+<form id="registerForm" style="display:none;">
+<label>البريد الإلكتروني</label>
+<input type="email" id="regEmail" placeholder="example@company.com" required />
+<label>كلمة المرور</label>
+<input type="password" id="regPassword" placeholder="••••••••" minlength="6" required />
+<label>الدور</label>
+<select id="regRole">
+  <option value="technician">فني</option>
+  <option value="admin">أدمن</option>
+</select>
+<div id="adminCodeWrap" style="display:none;">
+  <label>كود تفعيل الأدمن</label>
+  <input type="password" id="adminCode" placeholder="أدخل كود الأدمن السري" />
+  <div class="hint-small">هذا الكود يُعطى فقط للمخوّلين بإنشاء حسابات أدمن.</div>
+</div>
+<button type="submit" id="registerBtn">إنشاء الحساب</button>
+<div id="regErrorMsg" class="error-msg"></div>
+<div id="regSuccessMsg" class="success-msg"></div>
+</form>
+
 <div class="footer">نظام إدارة فحص الصاج - نسخة Supabase</div>
 </div>
 
@@ -139,11 +178,102 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   }
 });
 
-// ملاحظة أمنية: تم حذف إنشاء الحساب الذاتي من هنا عمدًا.
-// إنشاء المستخدمين (فني/أدمن) لازم يتم فقط من صفحة admin-users.html
-// وهي محمية بحيث لا يدخلها إلا مستخدم مسجل دوره "admin" بالفعل.
-// السماح بإنشاء حساب "أدمن" من صفحة تسجيل الدخول العامة كان ثغرة خطيرة
-// تسمح لأي زائر برفع صلاحياته لنفسه.
+// =========================================================
+// ⚠️ ملاحظة أمنية مهمة (اتقرا قبل ما تستخدم الميزة دي في الإنتاج):
+// تم إرجاع التسجيل الذاتي هنا بناءً على طلب صريح مع علم كامل بالمخاطر.
+// السماح لأي زائر بإنشاء حساب "أدمن" لنفسه هو ثغرة رفع صلاحيات (Privilege
+// Escalation) خطيرة. كإجراء تخفيف بسيط (مش بديل كامل عن الحل الآمن)
+// تم اشتراط "كود تفعيل الأدمن" قبل قبول دور admin من هذا الفورم.
+// هذا الكود مكتوب في الكود المصدري (JS) وبالتالي **مرئي لأي حد يفتح
+// أدوات المطور بالمتصفح** — فهو مجرد عائق بسيط مش حماية حقيقية.
+// الطريقة الآمنة الموصى بها فعليًا: كل تسجيل ذاتي يبقى "فني" فقط،
+// وترقية أي حساب لـ"أدمن" تتم يدويًا من admin-users.html بمعرفة أدمن موجود.
+// =========================================================
+
+// كود تفعيل الأدمن - غيّره لكود خاص بيك، ولا تشاركه إلا مع من تثق بهم
+const ADMIN_SIGNUP_CODE = "CHANGE_ME_1234";
+
+const tabLogin = document.getElementById('tabLogin');
+const tabRegister = document.getElementById('tabRegister');
+const loginForm = document.getElementById('loginForm');
+const registerForm = document.getElementById('registerForm');
+const mainTitle = document.getElementById('mainTitle');
+
+tabLogin.addEventListener('click', () => {
+  tabLogin.classList.add('active');
+  tabRegister.classList.remove('active');
+  loginForm.style.display = 'block';
+  registerForm.style.display = 'none';
+  mainTitle.textContent = '🔐 تسجيل الدخول';
+});
+
+tabRegister.addEventListener('click', () => {
+  tabRegister.classList.add('active');
+  tabLogin.classList.remove('active');
+  registerForm.style.display = 'block';
+  loginForm.style.display = 'none';
+  mainTitle.textContent = '📝 إنشاء حساب جديد';
+});
+
+document.getElementById('regRole').addEventListener('change', (e) => {
+  document.getElementById('adminCodeWrap').style.display = e.target.value === 'admin' ? 'block' : 'none';
+});
+
+registerForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const role = document.getElementById('regRole').value;
+  const adminCode = document.getElementById('adminCode').value;
+  const regErrorMsg = document.getElementById('regErrorMsg');
+  const regSuccessMsg = document.getElementById('regSuccessMsg');
+  const btn = document.getElementById('registerBtn');
+
+  regErrorMsg.textContent = '';
+  regErrorMsg.style.display = 'none';
+  regSuccessMsg.textContent = '';
+  regSuccessMsg.style.display = 'none';
+
+  if (role === 'admin' && adminCode !== ADMIN_SIGNUP_CODE) {
+    regErrorMsg.textContent = '❌ كود تفعيل الأدمن غير صحيح';
+    regErrorMsg.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري إنشاء الحساب...';
+
+  try {
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: { data: { role } }
+    });
+
+    if (error) throw error;
+
+    if (data.user) {
+      // إنشاء/تحديث صف الـ profile يدويًا لضمان وجوده بالدور الصحيح
+      const { error: profileError } = await client
+        .from('profiles')
+        .upsert({ id: data.user.id, email, role });
+      if (profileError) console.warn('Profile upsert warning:', profileError);
+    }
+
+    regSuccessMsg.textContent = '✅ تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.';
+    regSuccessMsg.style.display = 'block';
+    registerForm.reset();
+    document.getElementById('adminCodeWrap').style.display = 'none';
+
+    setTimeout(() => { tabLogin.click(); }, 1500);
+  } catch (err) {
+    regErrorMsg.textContent = '❌ ' + err.message;
+    regErrorMsg.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'إنشاء الحساب';
+  }
+});
 </script>
 </body>
 </html>
