@@ -120,6 +120,19 @@ const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// عميل منفصل بيُستخدم فقط لإنشاء حسابات جديدة (auth.signUp)
+// ده ضروري عشان استدعاء signUp() بيبدّل جلسة الدخول الحالية تلقائيًا
+// لو استخدمنا نفس الـ client بتاع الأدمن، هيتم تسجيل خروج الأدمن ضمنيًا
+// ويتم تسجيل دخوله كأنه المستخدم الجديد، وهيفشل إنشاء الـ profile بصمت.
+// باستخدام عميل مستقل بجلسة غير محفوظة، تفضل جلسة الأدمن سليمة طول الوقت.
+const creationClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    storageKey: 'temp-user-creation-session',
+    autoRefreshToken: false
+  }
+});
+
 let currentUser = null;
 let allUsers = [];
 let allStages = [];
@@ -207,7 +220,7 @@ document.getElementById('createUserBtn').addEventListener('click', async () => {
   const tempPassword = generateTempPassword();
   
   try {
-    const { data, error } = await client.auth.signUp({
+    const { data, error } = await creationClient.auth.signUp({
       email,
       password: tempPassword,
       options: {
@@ -221,6 +234,8 @@ document.getElementById('createUserBtn').addEventListener('click', async () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     // نعمل الـ profile يدوياً (لو ما اتعملش)
+    // ملحوظة: هنا لازم نستخدم "client" (جلسة الأدمن) مش "creationClient"،
+    // عشان الأدمن هو اللي يملك صلاحية الكتابة في profiles حسب الـ RLS
     const { error: profileError } = await client
       .from('profiles')
       .upsert({ 
@@ -231,6 +246,7 @@ document.getElementById('createUserBtn').addEventListener('click', async () => {
     
     if (profileError) {
       console.warn('Profile upsert warning:', profileError);
+      alert('⚠️ تم إنشاء حساب الدخول، لكن فشل إنشاء الـ profile: ' + profileError.message + '\nراجع صلاحيات RLS على جدول profiles.');
     }
     
     if (role === 'admin' && selectedStages.length > 0) {
