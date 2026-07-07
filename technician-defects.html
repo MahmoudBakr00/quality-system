@@ -157,16 +157,10 @@ tr:hover td { background: #2d3a4f; }
   <button class="btn-success" id="exportExcelBtn">📥 استخراج Excel</button>
 </div>
 
-<div class="actions-bar">
-  <button class="btn-danger" id="deleteSelectedBtn">🗑 حذف المحدد</button>
-  <button class="btn-danger" id="deleteAllBtn">🗑 حذف الكل</button>
-</div>
-
 <div class="table-wrapper">
 <table>
 <thead>
   <tr>
-    <th><input type="checkbox" id="selectAllCheckbox"></th>
     <th>#</th>
     <th>التاريخ</th>
     <th>السيريال</th>
@@ -177,7 +171,7 @@ tr:hover td { background: #2d3a4f; }
   </tr>
 </thead>
 <tbody id="defectsTableBody">
-  <tr><td colspan="8" class="empty-note">⏳ جاري التحميل...</td></tr>
+  <tr><td colspan="7" class="empty-note">⏳ جاري التحميل...</td></tr>
 </tbody>
 </table>
 </div>
@@ -199,7 +193,6 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let currentUser = null;
 let selectedStage = null;
 let allDefects = [];
-let selectedDefects = new Set();
 let currentScannerTarget = 'defect';
 let isFirstOff = false;
 
@@ -463,7 +456,7 @@ async function loadAllDefects() {
 function renderDefects(defects) {
   const tbody = document.getElementById('defectsTableBody');
   if (!defects || defects.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-note">📭 لا توجد عيوب مسجلة</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-note">📭 لا توجد عيوب مسجلة</td></tr>`;
     return;
   }
   
@@ -473,7 +466,6 @@ function renderDefects(defects) {
     const statusText = d.status === 'pending' ? '⏳ معلق' : d.status === 'approved' ? '✅ معتمد' : '❌ مرفوض';
     
     html += `<tr>
-      <td><input type="checkbox" class="defect-checkbox" data-id="${d.id}"></td>
       <td>${i + 1}</td>
       <td>${new Date(d.created_at).toLocaleDateString('ar-EG')}</td>
       <td>${d.serial_number || '-'}</td>
@@ -484,27 +476,6 @@ function renderDefects(defects) {
     </tr>`;
   });
   tbody.innerHTML = html;
-  
-  document.querySelectorAll('.defect-checkbox').forEach(cb => {
-    cb.addEventListener('change', (e) => {
-      if (e.target.checked) {
-        selectedDefects.add(e.target.dataset.id);
-      } else {
-        selectedDefects.delete(e.target.dataset.id);
-      }
-    });
-  });
-  
-  document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
-    document.querySelectorAll('.defect-checkbox').forEach(cb => {
-      cb.checked = e.target.checked;
-      if (e.target.checked) {
-        selectedDefects.add(cb.dataset.id);
-      } else {
-        selectedDefects.delete(cb.dataset.id);
-      }
-    });
-  });
 }
 
 document.getElementById('searchBtn').addEventListener('click', searchDefects);
@@ -543,14 +514,14 @@ document.getElementById('exportExcelBtn').addEventListener('click', () => {
   const data = [];
   visibleRows.forEach(row => {
     const cells = row.querySelectorAll('td');
-    if (cells.length >= 7) {
+    if (cells.length >= 6) {
       data.push({
-        date: cells[2].textContent,
-        serial: cells[3].textContent,
-        stage: cells[4].textContent,
-        defect_type: cells[5].textContent,
-        description: cells[6].textContent,
-        status: cells[7].textContent.trim()
+        date: cells[1].textContent,
+        serial: cells[2].textContent,
+        stage: cells[3].textContent,
+        defect_type: cells[4].textContent,
+        description: cells[5].textContent,
+        status: cells[6].textContent.trim()
       });
     }
   });
@@ -574,48 +545,8 @@ document.getElementById('exportExcelBtn').addEventListener('click', () => {
   URL.revokeObjectURL(link.href);
 });
 
-// ============ حذف البيانات ============
-document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
-  if (selectedDefects.size === 0) {
-    alert('⚠️ اختر العيوب التي تريد حذفها أولاً');
-    return;
-  }
-  
-  if (!confirm(`⚠️ هل أنت متأكد من حذف ${selectedDefects.size} عيب/عيوب محددة؟`)) return;
-  
-  try {
-    const ids = Array.from(selectedDefects);
-    const { error } = await client.from('defects').delete().in('id', ids);
-    if (error) throw error;
-    
-    alert(`✅ تم حذف ${ids.length} عيب/عيوب بنجاح`);
-    selectedDefects.clear();
-    loadAllDefects();
-  } catch (err) {
-    alert('❌ فشل الحذف: ' + err.message);
-  }
-});
-
-document.getElementById('deleteAllBtn').addEventListener('click', async () => {
-  const count = document.querySelectorAll('#defectsTableBody tr:not(.empty-note)').length;
-  if (count === 0) {
-    alert('⚠️ لا توجد عيوب للحذف');
-    return;
-  }
-  
-  if (!confirm(`⚠️ هل أنت متأكد من حذف كل العيوب (${count} عيب)؟ هذا الإجراء لا يمكن التراجع عنه!`)) return;
-  
-  try {
-    const { error } = await client.from('defects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    if (error) throw error;
-    
-    alert(`✅ تم حذف ${count} عيب/عيوب بنجاح`);
-    selectedDefects.clear();
-    loadAllDefects();
-  } catch (err) {
-    alert('❌ فشل الحذف: ' + err.message);
-  }
-});
+// ملاحظة: تم إخفاء زراير حذف العيوب من صفحة الفني عمدًا،
+// لأن صلاحية الحذف (RLS) مقصورة على الأدمن فقط. الحذف بيتم من صفحة defects-admin.html.
 
 loadAllDefects();
 </script>
