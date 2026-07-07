@@ -66,7 +66,7 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 
 .table-wrapper { overflow-x: auto; background: #0f172a; border-radius: 10px; padding: 10px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
-th { background: #334155; color: #94a3b8; padding: 10px 8px; text-align: center; border-bottom: 2px solid #475569; }
+th { background: #334155; color: #94a3b8; padding: 10px 8px; text-align: center; border-bottom: 2px solid #475569; position: sticky; top: 0; z-index: 10; }
 td { padding: 8px; text-align: center; border-bottom: 1px solid #334155; color: #e2e8f0; }
 tr:hover td { background: #2d3a4f; }
 .badge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
@@ -95,6 +95,11 @@ tr:hover td { background: #2d3a4f; }
     <div class="icon">⚠️</div>
     <div class="name">تسجيل عيب جديد</div>
     <div class="sub">سجل عيب في منتج معين</div>
+  </div>
+  <div class="card" id="firstOffCard">
+    <div class="icon">✅</div>
+    <div class="name">First Off</div>
+    <div class="sub">تسجيل أول قطعة منتجة</div>
   </div>
   <div class="card" id="searchDefectsCard">
     <div class="icon">🔍</div>
@@ -196,6 +201,7 @@ let selectedStage = null;
 let allDefects = [];
 let selectedDefects = new Set();
 let currentScannerTarget = 'defect';
+let isFirstOff = false;
 
 async function checkAuth() {
   const { data: { user } } = await client.auth.getUser();
@@ -220,6 +226,21 @@ function showView(view) {
 
 // ============ تسجيل العيوب ============
 document.getElementById('defectCard').addEventListener('click', () => {
+  isFirstOff = false;
+  document.getElementById('defectFormTitle').textContent = '⚠️ تسجيل عيب';
+  document.getElementById('defectSerial').required = true;
+  document.getElementById('defectSerial').placeholder = 'امسح الباركود أو اكتب السيريال';
+  document.getElementById('defectSubmitBtn').textContent = '✅ تسجيل العيب';
+  showView('stageSelect');
+  loadDefectStages();
+});
+
+document.getElementById('firstOffCard').addEventListener('click', () => {
+  isFirstOff = true;
+  document.getElementById('defectFormTitle').textContent = '✅ First Off - تسجيل أول قطعة';
+  document.getElementById('defectSerial').required = false;
+  document.getElementById('defectSerial').placeholder = 'السيريال (اختياري لـ First Off)';
+  document.getElementById('defectSubmitBtn').textContent = '✅ تسجيل First Off';
   showView('stageSelect');
   loadDefectStages();
 });
@@ -241,7 +262,6 @@ async function loadDefectStages() {
     div.innerHTML = `<div class="icon">🏭</div><div class="name">${s.name}</div><div class="sub">${s.line_no || ''}</div>`;
     div.addEventListener('click', () => {
       selectedStage = s;
-      document.getElementById('defectFormTitle').textContent = `⚠️ تسجيل عيب - ${s.name}`;
       showView('defectForm');
       loadDefectTypes(s.id);
     });
@@ -354,12 +374,12 @@ document.getElementById('defectForm').addEventListener('submit', async (e) => {
   const defectType = document.getElementById('defectType').value;
   const description = document.getElementById('defectDescription').value.trim();
   
-  if (!serial) {
+  if (!isFirstOff && !serial) {
     msg.textContent = '⚠️ يرجى إدخال السيريال';
     msg.className = 'msg msg-error';
     msg.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = '✅ تسجيل العيب';
+    btn.textContent = isFirstOff ? '✅ تسجيل First Off' : '✅ تسجيل العيب';
     return;
   }
   if (!defectType) {
@@ -367,25 +387,28 @@ document.getElementById('defectForm').addEventListener('submit', async (e) => {
     msg.className = 'msg msg-error';
     msg.style.display = 'block';
     btn.disabled = false;
-    btn.textContent = '✅ تسجيل العيب';
+    btn.textContent = isFirstOff ? '✅ تسجيل First Off' : '✅ تسجيل العيب';
     return;
   }
   
   try {
+    const finalSerial = serial || 'FIRST_OFF_' + new Date().toISOString().replace(/[:.]/g, '-');
+    const finalDefectType = isFirstOff ? 'First Off - ' + defectType : defectType;
+    
     const { data, error } = await client.from('defects').insert([{
-      serial_number: serial,
+      serial_number: finalSerial,
       stage_id: selectedStage.id,
       form_id: null,
       technician_id: currentUser.id,
       technician_email: currentUser.email,
-      defect_type: defectType,
+      defect_type: finalDefectType,
       description: description || null,
       status: 'pending'
     }]);
     
     if (error) throw error;
     
-    msg.textContent = '✅ تم تسجيل العيب بنجاح! سيتم مراجعته من قبل الأدمن.';
+    msg.textContent = isFirstOff ? '✅ تم تسجيل First Off بنجاح!' : '✅ تم تسجيل العيب بنجاح! سيتم مراجعته من قبل الأدمن.';
     msg.className = 'msg msg-success';
     msg.style.display = 'block';
     document.getElementById('defectSerial').value = '';
@@ -399,7 +422,7 @@ document.getElementById('defectForm').addEventListener('submit', async (e) => {
     msg.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = '✅ تسجيل العيب';
+    btn.textContent = isFirstOff ? '✅ تسجيل First Off' : '✅ تسجيل العيب';
   }
 });
 
@@ -501,6 +524,13 @@ function searchDefects() {
   
   renderDefects(filtered);
 }
+
+// إضافة Enter key للبحث
+document.getElementById('searchSerialInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    searchDefects();
+  }
+});
 
 // ============ استخراج Excel ============
 document.getElementById('exportExcelBtn').addEventListener('click', () => {
