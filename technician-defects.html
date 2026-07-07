@@ -9,7 +9,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background: #0f172a; padding: 20px; color: #f1f5f9; }
-.container { max-width: 1000px; margin: 0 auto; }
+.container { max-width: 1200px; margin: 0 auto; }
 .header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; flex-wrap: wrap; }
 .header span { color: #94a3b8; }
 .header .logout-btn { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; }
@@ -18,7 +18,7 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 .header .nav-link:hover { background: #475569; }
 .header .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-.view { background: #1e293b; border-radius: 16px; padding: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.view { background: #1e293b; border-radius: 16px; padding: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); margin-bottom: 20px; }
 .view h1 { text-align: center; color: #60a5fa; margin-bottom: 24px; font-size: 24px; }
 .back-btn { background: #64748b; color: white; border: none; padding: 8px 18px; border-radius: 8px; cursor: pointer; margin-bottom: 16px; font-weight: bold; }
 .back-btn:hover { background: #475569; }
@@ -40,8 +40,14 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 .btn-submit { grid-column: 1 / -1; padding: 14px; background: #22c55e; color: white; border: none; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 10px; }
 .btn-submit:hover { background: #16a34a; }
 .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-scan { background: #8b5cf6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.btn-scan { background: #8b5cf6; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; margin-right: 8px; }
 .btn-scan:hover { background: #7c3aed; }
+.btn-danger { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-danger:hover { background: #dc2626; }
+.btn-success { background: #22c55e; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-success:hover { background: #16a34a; }
+.btn-primary { background: #3b82f6; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-primary:hover { background: #2563eb; }
 
 .msg { padding: 12px; border-radius: 8px; text-align: center; margin-top: 16px; display: none; font-weight: bold; }
 .msg-success { background: #22c55e; color: white; }
@@ -52,6 +58,23 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 .scanner-container video { max-width: 100%; max-height: 80vh; border-radius: 12px; }
 .scanner-container .close-scanner { background: #ef4444; color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 18px; cursor: pointer; margin-top: 16px; }
 .scanner-container .close-scanner:hover { background: #dc2626; }
+
+.search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; background: #0f172a; padding: 12px; border-radius: 10px; }
+.search-box input { flex: 1; padding: 10px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; min-width: 200px; }
+.search-box button { padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.search-box select { padding: 10px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
+
+.table-wrapper { overflow-x: auto; background: #0f172a; border-radius: 10px; padding: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 800px; }
+th { background: #334155; color: #94a3b8; padding: 10px 8px; text-align: center; border-bottom: 2px solid #475569; }
+td { padding: 8px; text-align: center; border-bottom: 1px solid #334155; color: #e2e8f0; }
+tr:hover td { background: #2d3a4f; }
+.badge { padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+.badge-pending { background: #f59e0b; color: white; }
+.badge-approved { background: #22c55e; color: white; }
+.badge-rejected { background: #ef4444; color: white; }
+
+.actions-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
 </style>
 </head>
 <body>
@@ -66,17 +89,17 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 
 <!-- الشاشة الرئيسية -->
 <div class="view" id="mainView">
-<h1>🔧 تسجيل العيوب</h1>
+<h1>🔧 إدارة العيوب</h1>
 <div class="cards-grid">
   <div class="card" id="defectCard">
     <div class="icon">⚠️</div>
     <div class="name">تسجيل عيب جديد</div>
     <div class="sub">سجل عيب في منتج معين</div>
   </div>
-  <div class="card" id="firstOffCard">
-    <div class="icon">✅</div>
-    <div class="name">First Off</div>
-    <div class="sub">تسجيل أول قطعة منتجة</div>
+  <div class="card" id="searchDefectsCard">
+    <div class="icon">🔍</div>
+    <div class="name">البحث في العيوب</div>
+    <div class="sub">ابحث بالسيريال أو المرحلة</div>
   </div>
 </div>
 </div>
@@ -114,6 +137,47 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 <div id="defectMsg" class="msg"></div>
 </div>
 
+<!-- شاشة البحث في العيوب -->
+<div class="view" id="searchView" style="display:none;">
+<button class="back-btn" id="backToMainSearch">⬅ رجوع</button>
+<h1>🔍 البحث في العيوب</h1>
+
+<div class="search-box">
+  <input type="text" id="searchSerialInput" placeholder="🔍 ابحث بالسيريال...">
+  <button class="btn-scan" id="scanSearchBtn">📷 سكان</button>
+  <select id="searchStageFilter">
+    <option value="">كل المراحل</option>
+  </select>
+  <button class="btn-primary" id="searchBtn">بحث</button>
+  <button class="btn-success" id="exportExcelBtn">📥 استخراج Excel</button>
+</div>
+
+<div class="actions-bar">
+  <button class="btn-danger" id="deleteSelectedBtn">🗑 حذف المحدد</button>
+  <button class="btn-danger" id="deleteAllBtn">🗑 حذف الكل</button>
+</div>
+
+<div class="table-wrapper">
+<table>
+<thead>
+  <tr>
+    <th><input type="checkbox" id="selectAllCheckbox"></th>
+    <th>#</th>
+    <th>التاريخ</th>
+    <th>السيريال</th>
+    <th>المرحلة</th>
+    <th>نوع العيب</th>
+    <th>الوصف</th>
+    <th>الحالة</th>
+  </tr>
+</thead>
+<tbody id="defectsTableBody">
+  <tr><td colspan="8" class="empty-note">⏳ جاري التحميل...</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+
 <!-- ماسح الباركود -->
 <div class="scanner-container" id="scannerContainer">
   <video id="scannerVideo"></video>
@@ -129,13 +193,16 @@ const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
 let selectedStage = null;
-let defectTypesMap = {};
+let allDefects = [];
+let selectedDefects = new Set();
+let currentScannerTarget = 'defect';
 
 async function checkAuth() {
   const { data: { user } } = await client.auth.getUser();
   if (!user) { window.location.href = 'index.html'; return; }
   currentUser = user;
   document.getElementById('userEmail').textContent = user.email;
+  loadDefectStagesDropdown();
 }
 checkAuth();
 
@@ -148,15 +215,13 @@ function showView(view) {
   document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
   document.getElementById('stageSelectView').style.display = view === 'stageSelect' ? 'block' : 'none';
   document.getElementById('defectFormView').style.display = view === 'defectForm' ? 'block' : 'none';
+  document.getElementById('searchView').style.display = view === 'search' ? 'block' : 'none';
 }
 
+// ============ تسجيل العيوب ============
 document.getElementById('defectCard').addEventListener('click', () => {
   showView('stageSelect');
   loadDefectStages();
-});
-
-document.getElementById('firstOffCard').addEventListener('click', () => {
-  alert('🚧 ميزة First Off قيد التطوير');
 });
 
 document.getElementById('backToMain').addEventListener('click', () => showView('main'));
@@ -209,18 +274,12 @@ async function loadDefectTypes(stageId) {
   }
 }
 
-document.getElementById('scanSerialBtn').addEventListener('click', () => {
+// ============ ماسح الباركود ============
+function startScanner(target) {
+  currentScannerTarget = target;
   document.getElementById('scannerContainer').classList.add('open');
-  startScanner();
-});
-
-document.getElementById('closeScanner').addEventListener('click', () => {
-  stopScanner();
-  document.getElementById('scannerContainer').classList.remove('open');
-});
-
-function startScanner() {
   const video = document.getElementById('scannerVideo');
+  
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then(stream => {
@@ -249,12 +308,19 @@ function startScanner() {
           if (code) {
             stopScanner();
             document.getElementById('scannerContainer').classList.remove('open');
-            document.getElementById('defectSerial').value = code;
+            
+            if (currentScannerTarget === 'defect') {
+              document.getElementById('defectSerial').value = code;
+            } else if (currentScannerTarget === 'search') {
+              document.getElementById('searchSerialInput').value = code;
+              searchDefects();
+            }
           }
         });
       })
       .catch(err => {
         alert('❌ تعذر الوصول إلى الكاميرا: ' + err.message);
+        document.getElementById('scannerContainer').classList.remove('open');
       });
   }
 }
@@ -268,6 +334,14 @@ function stopScanner() {
   }
 }
 
+document.getElementById('scanSerialBtn').addEventListener('click', () => startScanner('defect'));
+document.getElementById('scanSearchBtn').addEventListener('click', () => startScanner('search'));
+document.getElementById('closeScanner').addEventListener('click', () => {
+  stopScanner();
+  document.getElementById('scannerContainer').classList.remove('open');
+});
+
+// ============ تسجيل العيب ============
 document.getElementById('defectForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = document.getElementById('defectSubmitBtn');
@@ -317,6 +391,8 @@ document.getElementById('defectForm').addEventListener('submit', async (e) => {
     document.getElementById('defectSerial').value = '';
     document.getElementById('defectDescription').value = '';
     document.getElementById('defectType').value = '';
+    
+    loadAllDefects();
   } catch (err) {
     msg.textContent = '❌ فشل التسجيل: ' + err.message;
     msg.className = 'msg msg-error';
@@ -326,6 +402,192 @@ document.getElementById('defectForm').addEventListener('submit', async (e) => {
     btn.textContent = '✅ تسجيل العيب';
   }
 });
+
+// ============ البحث في العيوب ============
+document.getElementById('searchDefectsCard').addEventListener('click', () => {
+  showView('search');
+  loadAllDefects();
+});
+
+document.getElementById('backToMainSearch').addEventListener('click', () => showView('main'));
+
+async function loadDefectStagesDropdown() {
+  const select = document.getElementById('searchStageFilter');
+  const { data, error } = await client.from('stages').select('*').order('name');
+  if (!error && data) {
+    data.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.name;
+      select.appendChild(o);
+    });
+  }
+}
+
+async function loadAllDefects() {
+  const { data, error } = await client.from('defects')
+    .select('*')
+    .order('created_at', { ascending: false });
+  
+  if (error) {
+    console.error('Error loading defects:', error);
+    return;
+  }
+  allDefects = data || [];
+  renderDefects(allDefects);
+}
+
+function renderDefects(defects) {
+  const tbody = document.getElementById('defectsTableBody');
+  if (!defects || defects.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-note">📭 لا توجد عيوب مسجلة</td></tr>`;
+    return;
+  }
+  
+  let html = '';
+  defects.forEach((d, i) => {
+    const statusClass = d.status === 'pending' ? 'badge-pending' : d.status === 'approved' ? 'badge-approved' : 'badge-rejected';
+    const statusText = d.status === 'pending' ? '⏳ معلق' : d.status === 'approved' ? '✅ معتمد' : '❌ مرفوض';
+    
+    html += `<tr>
+      <td><input type="checkbox" class="defect-checkbox" data-id="${d.id}"></td>
+      <td>${i + 1}</td>
+      <td>${new Date(d.created_at).toLocaleDateString('ar-EG')}</td>
+      <td>${d.serial_number || '-'}</td>
+      <td>${d.stage_id || '-'}</td>
+      <td>${d.defect_type || '-'}</td>
+      <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.description || '-'}</td>
+      <td><span class="badge ${statusClass}">${statusText}</span></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+  
+  document.querySelectorAll('.defect-checkbox').forEach(cb => {
+    cb.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        selectedDefects.add(e.target.dataset.id);
+      } else {
+        selectedDefects.delete(e.target.dataset.id);
+      }
+    });
+  });
+  
+  document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
+    document.querySelectorAll('.defect-checkbox').forEach(cb => {
+      cb.checked = e.target.checked;
+      if (e.target.checked) {
+        selectedDefects.add(cb.dataset.id);
+      } else {
+        selectedDefects.delete(cb.dataset.id);
+      }
+    });
+  });
+}
+
+document.getElementById('searchBtn').addEventListener('click', searchDefects);
+
+function searchDefects() {
+  const serial = document.getElementById('searchSerialInput').value.trim().toLowerCase();
+  const stageId = document.getElementById('searchStageFilter').value;
+  
+  let filtered = allDefects;
+  
+  if (serial) {
+    filtered = filtered.filter(d => d.serial_number && d.serial_number.toLowerCase().includes(serial));
+  }
+  if (stageId) {
+    filtered = filtered.filter(d => d.stage_id === stageId);
+  }
+  
+  renderDefects(filtered);
+}
+
+// ============ استخراج Excel ============
+document.getElementById('exportExcelBtn').addEventListener('click', () => {
+  const visibleRows = document.querySelectorAll('#defectsTableBody tr:not(.empty-note)');
+  if (visibleRows.length === 0) {
+    alert('⚠️ لا توجد بيانات للتصدير');
+    return;
+  }
+  
+  const data = [];
+  visibleRows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length >= 7) {
+      data.push({
+        date: cells[2].textContent,
+        serial: cells[3].textContent,
+        stage: cells[4].textContent,
+        defect_type: cells[5].textContent,
+        description: cells[6].textContent,
+        status: cells[7].textContent.trim()
+      });
+    }
+  });
+  
+  if (data.length === 0) {
+    alert('⚠️ لا توجد بيانات للتصدير');
+    return;
+  }
+  
+  const headers = ['التاريخ', 'السيريال', 'المرحلة', 'نوع العيب', 'الوصف', 'الحالة'];
+  let csv = headers.join(',') + '\n';
+  data.forEach(d => {
+    csv += `${d.date},${d.serial},${d.stage},${d.defect_type},${d.description},${d.status}\n`;
+  });
+  
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `العيوب_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
+// ============ حذف البيانات ============
+document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
+  if (selectedDefects.size === 0) {
+    alert('⚠️ اختر العيوب التي تريد حذفها أولاً');
+    return;
+  }
+  
+  if (!confirm(`⚠️ هل أنت متأكد من حذف ${selectedDefects.size} عيب/عيوب محددة؟`)) return;
+  
+  try {
+    const ids = Array.from(selectedDefects);
+    const { error } = await client.from('defects').delete().in('id', ids);
+    if (error) throw error;
+    
+    alert(`✅ تم حذف ${ids.length} عيب/عيوب بنجاح`);
+    selectedDefects.clear();
+    loadAllDefects();
+  } catch (err) {
+    alert('❌ فشل الحذف: ' + err.message);
+  }
+});
+
+document.getElementById('deleteAllBtn').addEventListener('click', async () => {
+  const count = document.querySelectorAll('#defectsTableBody tr:not(.empty-note)').length;
+  if (count === 0) {
+    alert('⚠️ لا توجد عيوب للحذف');
+    return;
+  }
+  
+  if (!confirm(`⚠️ هل أنت متأكد من حذف كل العيوب (${count} عيب)؟ هذا الإجراء لا يمكن التراجع عنه!`)) return;
+  
+  try {
+    const { error } = await client.from('defects').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw error;
+    
+    alert(`✅ تم حذف ${count} عيب/عيوب بنجاح`);
+    selectedDefects.clear();
+    loadAllDefects();
+  } catch (err) {
+    alert('❌ فشل الحذف: ' + err.message);
+  }
+});
+
+loadAllDefects();
 </script>
 </body>
 </html>
