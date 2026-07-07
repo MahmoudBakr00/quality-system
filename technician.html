@@ -162,8 +162,17 @@ async function loadStages() {
   const { data, error } = await client.from('stages').select('*').order('created_at', { ascending: true });
   if (error) { el.innerHTML = `<div class="empty-note">❌ فشل تحميل المراحل</div>`; return; }
   if (!data || data.length === 0) { el.innerHTML = `<div class="empty-note">📭 لا توجد مراحل مضافة بعد. تواصل مع الأدمن.</div>`; return; }
+
+  // فلترة المراحل حسب صلاحيات الدخول (stage_technicians)
+  // المرحلة تظهر لو: مفيش تقييد عليها خالص، أو الفني الحالي من ضمن الفنيين المسموح لهم
+  const { data: accessRows } = await client.from('stage_technicians').select('stage_id, technician_id');
+  const restrictedStageIds = new Set((accessRows || []).map(r => r.stage_id));
+  const allowedStageIds = new Set((accessRows || []).filter(r => r.technician_id === currentUser.id).map(r => r.stage_id));
+  const visibleStages = data.filter(s => !restrictedStageIds.has(s.id) || allowedStageIds.has(s.id));
+
+  if (visibleStages.length === 0) { el.innerHTML = `<div class="empty-note">📭 لا توجد مراحل متاحة لك حاليًا. تواصل مع الأدمن.</div>`; return; }
   el.innerHTML = '';
-  data.forEach(s => {
+  visibleStages.forEach(s => {
     const div = document.createElement('div');
     div.className = 'card';
     div.innerHTML = `<div class="icon">🏭</div><div class="name">${s.name}</div><div class="sub">${s.line_no ? 'خط: ' + s.line_no : ''}</div>`;
