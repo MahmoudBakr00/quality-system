@@ -3,167 +3,347 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>تسجيل الدخول - نظام فحص الصاج</title>
+<title>لوحة التحكم - الأدمن</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { background: #0f172a; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-.login-container { background: #1e293b; padding: 40px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 400px; }
-.login-container h2 { color: #f8fafc; text-align: center; margin-bottom: 30px; font-size: 28px; }
-.login-container label { color: #cbd5e1; display: block; margin-bottom: 6px; font-weight: 600; }
-.login-container input { width: 100%; padding: 12px 16px; margin-bottom: 20px; border: none; border-radius: 8px; background: #334155; color: #f1f5f9; font-size: 16px; transition: 0.3s; }
-.login-container input:focus { outline: 2px solid #3b82f6; background: #1e293b; }
-.login-container button { width: 100%; padding: 14px; background: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-.login-container button:hover { background: #2563eb; transform: scale(1.02); }
-.login-container button:disabled { opacity: 0.6; cursor: not-allowed; }
-.error-msg { color: #f87171; text-align: center; margin-top: 12px; font-size: 14px; }
-.register-link { color: #94a3b8; text-align: center; margin-top: 16px; font-size: 14px; }
-.register-link a { color: #60a5fa; text-decoration: none; cursor: pointer; }
-.register-link a:hover { text-decoration: underline; }
-.footer { text-align: center; color: #475569; margin-top: 20px; font-size: 12px; }
+body { background: #0f172a; padding: 20px; color: #f1f5f9; }
+.container { max-width: 1400px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 16px 30px; border-radius: 14px; margin-bottom: 24px; flex-wrap: wrap; gap: 10px; }
+.header h1 { color: #60a5fa; font-size: 22px; }
+.header .logout-btn { background: #ef4444; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+.header .logout-btn:hover { background: #dc2626; }
+.header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.header-actions a { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.header-actions a:hover { background: #475569; }
+.btn-danger { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-danger:hover { background: #dc2626; }
+.btn-success { background: #22c55e; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-success:hover { background: #16a34a; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.stat-card { background: #1e293b; padding: 16px; border-radius: 12px; text-align: center; }
+.stat-card .number { font-size: 28px; font-weight: bold; color: #60a5fa; }
+.stat-card .label { color: #94a3b8; font-size: 13px; }
+
+.filter-bar { display: flex; gap: 10px; flex-wrap: wrap; background: #1e293b; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; align-items: center; }
+.filter-bar input, .filter-bar select { padding: 8px 14px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
+.filter-bar input::placeholder { color: #64748b; }
+.filter-bar button { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.filter-bar .btn-filter { background: #3b82f6; color: white; }
+.filter-bar .btn-filter:hover { background: #2563eb; }
+.filter-bar .btn-reset { background: #64748b; color: white; }
+.filter-bar .btn-reset:hover { background: #475569; }
+
+.table-wrapper { overflow-x: auto; background: #1e293b; border-radius: 14px; padding: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1400px; }
+th { background: #334155; color: #94a3b8; padding: 10px 6px; text-align: center; border-bottom: 2px solid #475569; position: sticky; top: 0; z-index: 10; }
+td { padding: 8px 6px; text-align: center; border-bottom: 1px solid #334155; color: #e2e8f0; }
+tr:hover td { background: #2d3a4f; }
+.badge-ok { background: #22c55e; color: white; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; }
+.badge-nok { background: #ef4444; color: white; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: bold; }
+.badge-na { background: #64748b; color: white; padding: 2px 10px; border-radius: 20px; font-size: 10px; }
+.loading { text-align: center; padding: 40px; color: #94a3b8; }
+.no-data { text-align: center; padding: 40px; color: #64748b; font-size: 18px; }
+.refresh-btn { background: #8b5cf6; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; }
+.refresh-btn:hover { background: #7c3aed; }
 </style>
 </head>
 <body>
-<div class="login-container">
-<h2>🔐 تسجيل الدخول</h2>
-<form id="loginForm">
-<label>البريد الإلكتروني</label>
-<input type="email" id="email" placeholder="example@company.com" required />
-<label>كلمة المرور</label>
-<input type="password" id="password" placeholder="••••••••" required />
-<button type="submit" id="loginBtn">دخول</button>
-<div id="errorMsg" class="error-msg"></div>
-</form>
-<div class="register-link">
-ليس لديك حساب؟ <a id="registerLink">إنشاء حساب جديد</a>
+<div class="container">
+<div class="header">
+<h1>📊 لوحة تحكم الأدمن</h1>
+<div class="header-actions">
+<a href="models-manager.html">🧩 إدارة الموديلات</a>
+<a href="submissions.html">📄 سجلات الفورمات</a>
+<a href="defects-admin.html">🔧 إدارة العيوب</a>
+<a href="admin-users.html">👥 إدارة المستخدمين</a>
+<span style="color:#94a3b8; margin-left:8px;" id="adminEmail">admin@company.com</span>
+<button class="refresh-btn" id="refreshBtn">🔄 تحديث</button>
+<button class="btn-success" id="exportAllExcel">📥 استخراج Excel</button>
+<button class="btn-danger" id="deleteAllData">🗑 مسح كل البيانات</button>
+<button class="logout-btn" id="logoutBtn">تسجيل خروج</button>
 </div>
-<div class="footer">نظام إدارة فحص الصاج - نسخة Supabase</div>
+</div>
+
+<div class="stats" id="statsContainer">
+<div class="stat-card"><div class="number" id="totalCount">0</div><div class="label">إجمالي الفحوصات</div></div>
+<div class="stat-card"><div class="number" id="okCount">0</div><div class="label">✅ مقبول (OK)</div></div>
+<div class="stat-card"><div class="number" id="nokCount">0</div><div class="label">❌ مرفوض (NOK)</div></div>
+<div class="stat-card"><div class="number" id="defectCount">0</div><div class="label">⚠️ عيوب معلقة</div></div>
+</div>
+
+<div class="filter-bar">
+<select id="filterStage"><option value="">كل المراحل</option></select>
+<select id="filterForm"><option value="">كل الموديلات</option></select>
+<input type="text" id="filterSerial" placeholder="السيريال" />
+<input type="text" id="filterPart" placeholder="البارت نمبر" />
+<input type="text" id="filterTechnician" placeholder="اسم الفني" />
+<button class="btn-filter" id="applyFilter">🔍 تصفية</button>
+<button class="btn-reset" id="resetFilter">↺ إعادة تعيين</button>
+</div>
+
+<div class="table-wrapper">
+<table>
+<thead>
+<tr>
+<th>#</th><th>التاريخ</th><th>الوقت</th>
+<th>الجزء</th><th>المنتج</th><th>الموديل</th>
+<th>المرحلة</th><th>الخط</th><th>العامل</th><th>السيريال</th>
+<th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th><th>S6</th>
+<th>الطول</th><th>العرض</th>
+<th>القرار</th><th>الفني</th>
+</tr>
+</thead>
+<tbody id="inspectionTableBody">
+<tr><td colspan="20" class="loading">⏳ جاري تحميل البيانات...</td></tr>
+</tbody>
+</table>
+</div>
 </div>
 
 <script>
-// =======================================================
-// بيانات مشروعك من Supabase (Settings > API)
-// =======================================================
 const SUPABASE_URL = "https://bqjlqqaabiumcexqchqc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
-
-// التحقق من وجود المكتبة
-if (typeof supabase === 'undefined') {
-  document.getElementById('errorMsg').textContent = '❌ فشل تحميل مكتبة Supabase، تأكد من اتصال الإنترنت';
-  document.getElementById('errorMsg').style.display = 'block';
-}
-
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
-  const errorMsg = document.getElementById('errorMsg');
-  const btn = document.getElementById('loginBtn');
-  errorMsg.textContent = '';
-  errorMsg.style.display = 'none';
-  btn.disabled = true;
-  btn.textContent = '⏳ جاري الدخول...';
+let allData = [];
+let allStages = [];
+let allForms = [];
 
+async function checkAuth() {
   try {
-    // محاولة تسجيل الدخول
-    const { data, error } = await client.auth.signInWithPassword({ 
-      email, 
-      password 
-    });
-    
-    if (error) {
-      errorMsg.textContent = '❌ ' + error.message;
-      errorMsg.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'دخول';
-      return;
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) { 
+      window.location.href = 'index.html'; 
+      return; 
     }
-
-    if (!data || !data.user) {
-      errorMsg.textContent = '❌ لم يتم العثور على المستخدم';
-      errorMsg.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'دخول';
-      return;
-    }
-
-    // جلب دور المستخدم
-    const { data: profile, error: profileError } = await client
-      .from('profiles')
-      .select('role')
-      .eq('id', data.user.id)
-      .single();
-
-    if (profileError || !profile) {
-      errorMsg.textContent = '⚠️ لم يتم العثور على بيانات المستخدم';
-      errorMsg.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'دخول';
-      return;
-    }
-
-    // التوجيه حسب الدور
-    if (profile.role === 'technician') {
-      window.location.href = 'technician.html';
-    } else if (profile.role === 'admin') {
-      window.location.href = 'admin.html';
-    } else {
-      errorMsg.textContent = '⚠️ دور غير معروف: ' + profile.role;
-      errorMsg.style.display = 'block';
-      btn.disabled = false;
-      btn.textContent = 'دخول';
-    }
+    document.getElementById('adminEmail').textContent = user.email;
+    await loadLookups();
+    await loadData();
+    await loadDefects();
   } catch (error) {
-    errorMsg.textContent = '❌ حدث خطأ: ' + error.message;
-    errorMsg.style.display = 'block';
-    console.error('Login error:', error);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'دخول';
+    console.error('Auth error:', error);
+    window.location.href = 'index.html';
   }
+}
+checkAuth();
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await client.auth.signOut();
+  window.location.href = 'index.html';
+});
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  loadData();
+  loadDefects();
 });
 
-// إنشاء حساب جديد
-document.getElementById('registerLink').addEventListener('click', async () => {
-  const email = prompt('📧 أدخل البريد الإلكتروني للمستخدم الجديد:');
-  if (!email) return;
+async function loadLookups() {
+  try {
+    const { data: stages } = await client.from('stages').select('*').order('name');
+    allStages = stages || [];
+    const { data: forms } = await client.from('forms').select('*').order('name');
+    allForms = forms || [];
+
+    const stageSel = document.getElementById('filterStage');
+    stageSel.innerHTML = '<option value="">كل المراحل</option>';
+    allStages.forEach(s => {
+      const o = document.createElement('option'); o.value = s.id; o.textContent = s.name;
+      stageSel.appendChild(o);
+    });
+
+    const formSel = document.getElementById('filterForm');
+    formSel.innerHTML = '<option value="">كل الموديلات</option>';
+    allForms.forEach(f => {
+      const o = document.createElement('option'); o.value = f.id; o.textContent = f.name;
+      formSel.appendChild(o);
+    });
+  } catch (error) {
+    console.error('Load lookups error:', error);
+  }
+}
+
+function getStageName(id) {
+  const s = allStages.find(st => st.id === id);
+  return s ? s.name : '-';
+}
+
+function getFormName(id) {
+  const f = allForms.find(fm => fm.id === id);
+  return f ? f.name : '-';
+}
+
+function getOverall(d) {
+  let ok = true;
+  for (let i = 1; i <= 6; i++) {
+    if (d['s' + i] === 'NOK') { ok = false; break; }
+  }
+  const len = parseFloat(d.length);
+  const wid = parseFloat(d.width);
+  if (len && (len < 1605.5 || len > 1606.5)) ok = false;
+  if (wid && (wid < 555.5 || wid > 556.5)) ok = false;
+  return ok ? 'OK' : 'NOK';
+}
+
+function badge(value) {
+  if (value === 'OK') return `<span class="badge-ok">OK</span>`;
+  if (value === 'NOK') return `<span class="badge-nok">NOK</span>`;
+  return `<span class="badge-na">N/A</span>`;
+}
+
+async function loadData() {
+  try {
+    const { data, error } = await client
+      .from('inspections')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    allData = data || [];
+    renderTable(allData);
+  } catch (error) {
+    console.error('Load data error:', error);
+    document.getElementById('inspectionTableBody').innerHTML = `<tr><td colspan="20" class="loading">❌ فشل تحميل البيانات</td></tr>`;
+  }
+}
+
+async function loadDefects() {
+  try {
+    const { data, error } = await client.from('defects').select('*').eq('status', 'pending');
+    if (!error) {
+      document.getElementById('defectCount').textContent = (data || []).length;
+    }
+  } catch (error) {
+    console.error('Load defects error:', error);
+  }
+}
+
+function renderTable(data) {
+  const tbody = document.getElementById('inspectionTableBody');
+  if (!data || data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="20" class="no-data">📭 لا توجد قراءات مسجلة</td></tr>`;
+    document.getElementById('totalCount').textContent = '0';
+    document.getElementById('okCount').textContent = '0';
+    document.getElementById('nokCount').textContent = '0';
+    return;
+  }
+  let html = '';
+  data.forEach((d, index) => {
+    const overall = getOverall(d);
+    html += `<tr>
+      <td>${index + 1}</td>
+      <td>${d.date || '-'}</td>
+      <td>${d.time || '-'}</td>
+      <td>${d.part_no || '-'}</td>
+      <td>${d.product || '-'}</td>
+      <td>${d.model || '-'}</td>
+      <td>${d.process || '-'}</td>
+      <td>${d.line_no || '-'}</td>
+      <td>${d.worker || '-'}</td>
+      <td>${d.serial_number || '-'}</td>
+      <td>${badge(d.s1)}</td>
+      <td>${badge(d.s2)}</td>
+      <td>${badge(d.s3)}</td>
+      <td>${badge(d.s4)}</td>
+      <td>${badge(d.s5)}</td>
+      <td>${badge(d.s6)}</td>
+      <td>${d.length || '-'}</td>
+      <td>${d.width || '-'}</td>
+      <td><span class="${overall === 'OK' ? 'badge-ok' : 'badge-nok'}">${overall}</span></td>
+      <td>${d.technician_email ? d.technician_email.split('@')[0] : '-'}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+
+  const total = data.length;
+  const okCount = data.filter(d => getOverall(d) === 'OK').length;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('okCount').textContent = okCount;
+  document.getElementById('nokCount').textContent = total - okCount;
+}
+
+function applyFilters() {
+  const stageId = document.getElementById('filterStage').value;
+  const formId = document.getElementById('filterForm').value;
+  const serial = document.getElementById('filterSerial').value.trim().toLowerCase();
+  const part = document.getElementById('filterPart').value.trim().toLowerCase();
+  const technician = document.getElementById('filterTechnician').value.trim().toLowerCase();
   
-  const password = prompt('🔑 أدخل كلمة المرور (6 أحرف على الأقل):');
-  if (!password || password.length < 6) {
-    alert('⚠️ كلمة المرور يجب أن تكون 6 أحرف أو أكثر');
+  let filtered = allData;
+  if (stageId) {
+    const stageName = getStageName(stageId);
+    filtered = filtered.filter(d => d.process === stageName);
+  }
+  if (formId) {
+    const formName = getFormName(formId);
+    filtered = filtered.filter(d => d.model === formName);
+  }
+  if (serial) filtered = filtered.filter(d => d.serial_number && d.serial_number.toLowerCase().includes(serial));
+  if (part) filtered = filtered.filter(d => d.part_no && d.part_no.toLowerCase().includes(part));
+  if (technician) filtered = filtered.filter(d => d.technician_email && d.technician_email.toLowerCase().includes(technician));
+  renderTable(filtered);
+}
+
+document.getElementById('applyFilter').addEventListener('click', applyFilters);
+
+document.getElementById('resetFilter').addEventListener('click', () => {
+  document.getElementById('filterStage').value = '';
+  document.getElementById('filterForm').value = '';
+  document.getElementById('filterSerial').value = '';
+  document.getElementById('filterPart').value = '';
+  document.getElementById('filterTechnician').value = '';
+  renderTable(allData);
+});
+
+// ============ استخراج Excel ============
+document.getElementById('exportAllExcel').addEventListener('click', () => {
+  if (allData.length === 0) {
+    alert('⚠️ لا توجد بيانات للتصدير');
     return;
   }
   
-  const roleChoice = confirm(
-    '👤 اختر دور المستخدم:\n\n' +
-    'اضغط "موافق" → أدمن (مدير)\n' +
-    'اضغط "إلغاء" → فني (تقني)'
-  );
-  const role = roleChoice ? 'admin' : 'technician';
+  const headers = ['التاريخ', 'الوقت', 'الجزء', 'المنتج', 'الموديل', 'المرحلة', 'الخط', 'العامل', 'السيريال', 'S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'الطول', 'العرض', 'القرار', 'الفني'];
+  let csv = headers.join(',') + '\n';
+  
+  allData.forEach(d => {
+    const overall = getOverall(d);
+    const row = [
+      d.date || '', d.time || '', d.part_no || '', d.product || '', d.model || '',
+      d.process || '', d.line_no || '', d.worker || '', d.serial_number || '',
+      d.s1 || '', d.s2 || '', d.s3 || '', d.s4 || '', d.s5 || '', d.s6 || '',
+      d.length || '', d.width || '',
+      overall,
+      d.technician_email ? d.technician_email.split('@')[0] : ''
+    ];
+    csv += row.join(',') + '\n';
+  });
+  
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `كل_الفحوصات_${new Date().toISOString().slice(0,10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
 
+// ============ مسح كل البيانات ============
+document.getElementById('deleteAllData').addEventListener('click', async () => {
+  const count = allData.length;
+  if (count === 0) {
+    alert('⚠️ لا توجد بيانات للمسح');
+    return;
+  }
+  
+  if (!confirm(`⚠️ هل أنت متأكد من مسح كل بيانات الفحوصات (${count} سجل)؟ هذا الإجراء لا يمكن التراجع عنه!`)) return;
+  
   try {
-    const { data, error } = await client.auth.signUp({
-      email,
-      password,
-      options: { 
-        data: { role },
-        emailRedirectTo: window.location.origin + '/index.html'
-      }
-    });
+    const { error } = await client.from('inspections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw error;
     
-    if (error) {
-      alert('❌ فشل إنشاء الحساب: ' + error.message);
-      return;
-    }
-    
-    alert('✅ تم إنشاء الحساب بنجاح!\n' +
-      '📧 ' + email + '\n' +
-      '👤 الدور: ' + (role === 'admin' ? 'أدمن' : 'فني') + '\n\n' +
-      'يمكنك الآن تسجيل الدخول.');
-  } catch (error) {
-    alert('❌ فشل إنشاء الحساب: ' + error.message);
+    alert(`✅ تم مسح ${count} سجل بنجاح`);
+    await loadData();
+    await loadDefects();
+  } catch (err) {
+    alert('❌ فشل المسح: ' + err.message);
   }
 });
 </script>
