@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>إدارة الادمن - الأدمن العام</title>
+<title>إدارة المستخدمين - الأدمن</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -24,34 +24,27 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 .user-card .info { display: flex; flex-direction: column; }
 .user-card .info .name { font-weight: bold; color: #f1f5f9; }
 .user-card .info .email { font-size: 12px; color: #94a3b8; }
-.user-card .stages-list { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-.user-card .stages-list .tag { background: #1e293b; padding: 2px 10px; border-radius: 20px; font-size: 11px; color: #60a5fa; }
 
 .btn-edit { background: #3b82f6; color: white; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
 .btn-edit:hover { background: #2563eb; }
 
-.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
-.modal-overlay.open { display: flex; }
-.modal-box { background: #1e293b; border-radius: 14px; padding: 24px; width: 90%; max-width: 450px; max-height: 80vh; overflow-y: auto; }
-.modal-box h3 { color: #60a5fa; margin-bottom: 16px; }
-.modal-box .field { margin-bottom: 14px; }
-.modal-box .field label { display: block; color: #94a3b8; font-size: 12px; margin-bottom: 4px; }
-.modal-box .field select, .modal-box .field input { width: 100%; padding: 10px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
-.modal-box .field .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; max-height: 200px; overflow-y: auto; }
-.modal-box .field .checkbox-group label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #e2e8f0; cursor: pointer; }
-.modal-box .field .checkbox-group label input { width: auto; }
-.modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-.modal-actions button { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-.modal-save { background: #22c55e; color: white; }
-.modal-save:hover { background: #16a34a; }
-.modal-cancel { background: #64748b; color: white; }
-.modal-cancel:hover { background: #475569; }
+.user-form { background: #0f172a; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+.user-form .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.user-form .field { display: flex; flex-direction: column; }
+.user-form .field label { font-size: 12px; color: #94a3b8; margin-bottom: 4px; }
+.user-form .field input, .user-form .field select { padding: 10px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
+.user-form .field select[multiple] { height: 100px; }
+.user-form .actions { grid-column: 1/-1; display: flex; gap: 10px; margin-top: 10px; }
+.btn-primary { background: #3b82f6; color: white; border: none; padding: 10px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+.btn-primary:hover { background: #2563eb; }
+.temp-password { background: #1e293b; padding: 10px; border-radius: 8px; margin-top: 10px; display: none; }
+.temp-password .pass { color: #fbbf24; font-size: 18px; font-weight: bold; direction: ltr; }
 </style>
 </head>
 <body>
 <div class="container">
 <div class="header">
-<h1>👥 إدارة الادمن الفرعيين</h1>
+<h1>👥 إدارة المستخدمين</h1>
 <div class="nav-links">
 <a href="admin.html">📊 لوحة التحكم</a>
 <a href="models-manager.html">🧩 إدارة الموديلات</a>
@@ -62,28 +55,40 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 </div>
 
 <div class="panel">
-<h2>📋 الادمن المسجلون</h2>
-<div class="hint">🔹 الأدمن العام (أنت) يمكنه التحكم بكل المراحل.<br>🔹 الأدمن الفرعي يمكن تخصيصه لمراحل معينة فقط.</div>
-<div id="adminsList"><div class="hint">⏳ جاري التحميل...</div></div>
+<h2>➕ إضافة مستخدم جديد</h2>
+<div class="user-form">
+  <div class="row">
+    <div class="field">
+      <label>📧 البريد الإلكتروني</label>
+      <input type="email" id="newUserEmail" placeholder="example@company.com" />
+    </div>
+    <div class="field">
+      <label>👤 الدور</label>
+      <select id="newUserRole">
+        <option value="technician">فني</option>
+        <option value="admin">أدمن</option>
+      </select>
+    </div>
+    <div class="field" id="stageAssignment" style="display:none;">
+      <label>🏭 المراحل المسموح بها (للأدمن الفرعي)</label>
+      <select id="newUserStages" multiple>
+      </select>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" id="createUserBtn">➕ إنشاء حساب وإرسال البيانات</button>
+    </div>
+    <div class="temp-password" id="tempPasswordDisplay">
+      <label>🔑 كلمة المرور المؤقتة للموظف:</label>
+      <div class="pass" id="tempPasswordText">********</div>
+      <small style="color:#94a3b8;">تم إرسالها إلى بريد الموظف. سيقوم بتغييرها عند أول تسجيل دخول.</small>
+    </div>
+  </div>
 </div>
 </div>
 
-<!-- مودال تعديل صلاحيات الأدمن -->
-<div class="modal-overlay" id="editModal">
-<div class="modal-box">
-<h3 id="editTitle">🔧 تعديل صلاحيات الأدمن</h3>
-<div class="field">
-<label>📧 البريد الإلكتروني</label>
-<input type="text" id="editEmail" disabled />
-</div>
-<div class="field">
-<label>🏭 المراحل المسموح بها (اختر المراحل التي يمكن لهذا الأدمن إدارتها)</label>
-<div class="checkbox-group" id="editStagesCheckboxes"></div>
-</div>
-<div class="modal-actions">
-<button class="modal-save" id="editSaveBtn">💾 حفظ التعديلات</button>
-<button class="modal-cancel" id="editCancelBtn">إلغاء</button>
-</div>
+<div class="panel">
+<h2>📋 المستخدمين المسجلين</h2>
+<div id="usersList"><div class="hint">⏳ جاري التحميل...</div></div>
 </div>
 </div>
 
@@ -93,9 +98,8 @@ const SUPABASE_ANON_KEY = "sb_publishable_D6-VvfjFbWgngyTwkkqrfA_pfoDS-1W";
 const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let currentUser = null;
-let allAdmins = [];
+let allUsers = [];
 let allStages = [];
-let adminStagesMap = {};
 
 async function checkAuth() {
   const { data: { user } } = await client.auth.getUser();
@@ -103,7 +107,9 @@ async function checkAuth() {
   currentUser = user;
   const { data: profile } = await client.from('profiles').select('role').eq('id', user.id).single();
   if (!profile || profile.role !== 'admin') { window.location.href = 'index.html'; return; }
-  await loadAllData();
+  
+  await loadStages();
+  loadUsers();
 }
 checkAuth();
 
@@ -112,111 +118,119 @@ document.getElementById('logoutBtn').addEventListener('click', async () => {
   window.location.href = 'index.html';
 });
 
-async function loadAllData() {
-  const { data: admins } = await client.from('profiles').select('id, email, role').eq('role', 'admin');
-  allAdmins = admins || [];
-  
-  const { data: stages } = await client.from('stages').select('*').order('name');
-  allStages = stages || [];
-  
-  const { data: adminStages } = await client.from('admin_stages').select('*');
-  adminStagesMap = {};
-  (adminStages || []).forEach(as => {
-    if (!adminStagesMap[as.admin_id]) adminStagesMap[as.admin_id] = [];
-    adminStagesMap[as.admin_id].push(as.stage_id);
-  });
-  
-  renderAdmins();
+document.getElementById('newUserRole').addEventListener('change', (e) => {
+  document.getElementById('stageAssignment').style.display = e.target.value === 'admin' ? 'block' : 'none';
+});
+
+async function loadStages() {
+  const { data, error } = await client.from('stages').select('*').order('name');
+  if (!error && data) {
+    allStages = data;
+    const select = document.getElementById('newUserStages');
+    select.innerHTML = '';
+    data.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.id;
+      o.textContent = s.name;
+      select.appendChild(o);
+    });
+  }
 }
 
-function renderAdmins() {
-  const container = document.getElementById('adminsList');
-  if (allAdmins.length === 0) {
-    container.innerHTML = `<div class="hint">📭 لا يوجد ادمن مسجلين بعد</div>`;
+async function loadUsers() {
+  const { data, error } = await client.from('profiles').select('id, email, role').order('created_at');
+  if (error) {
+    document.getElementById('usersList').innerHTML = `<div class="hint">❌ فشل التحميل</div>`;
+    return;
+  }
+  allUsers = data || [];
+  renderUsers();
+}
+
+function renderUsers() {
+  const container = document.getElementById('usersList');
+  if (allUsers.length === 0) {
+    container.innerHTML = `<div class="hint">📭 لا يوجد مستخدمين مسجلين</div>`;
     return;
   }
   
   let html = '';
-  allAdmins.forEach(admin => {
-    const isCurrent = admin.id === currentUser.id;
-    const assignedStages = adminStagesMap[admin.id] || [];
-    const stageNames = assignedStages.map(id => {
-      const s = allStages.find(st => st.id === id);
-      return s ? s.name : '';
-    }).filter(Boolean);
-    
+  allUsers.forEach(user => {
+    const isCurrent = user.id === currentUser.id;
+    const roleName = user.role === 'admin' ? 'أدمن' : 'فني';
     html += `
       <div class="user-card">
         <div class="info">
-          <div class="name">${admin.email || 'بدون بريد'} ${isCurrent ? '⭐ (أنت)' : ''}</div>
-          <div class="email">${isCurrent ? 'الأدمن العام - لديه صلاحية كل المراحل' : 'الأدمن الفرعي'}</div>
-          <div class="stages-list">
-            ${isCurrent ? '<span class="tag" style="background:#3b82f6;">🔓 كل المراحل</span>' :
-              stageNames.length > 0 ? stageNames.map(n => `<span class="tag">🏭 ${n}</span>`).join('') :
-              '<span class="tag" style="color:#64748b;">🚫 بدون صلاحيات</span>'}
-          </div>
+          <div class="name">${user.email || 'بدون بريد'} ${isCurrent ? '⭐ (أنت)' : ''}</div>
+          <div class="email">${roleName}</div>
         </div>
-        ${!isCurrent ? `<button class="btn-edit" data-id="${admin.id}">✏️ تعديل</button>` : ''}
+        ${!isCurrent ? `<button class="btn-edit" data-id="${user.id}">✏️ تعديل الصلاحيات</button>` : ''}
       </div>
     `;
   });
   container.innerHTML = html;
   
   document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', () => openEditModal(btn.dataset.id));
+    btn.addEventListener('click', () => {
+      alert('🚧 ميزة تعديل الصلاحيات قيد التطوير');
+    });
   });
 }
 
-function openEditModal(adminId) {
-  const admin = allAdmins.find(a => a.id === adminId);
-  if (!admin) return;
+// ============ إنشاء حساب جديد وإرسال بيانات الدخول ============
+document.getElementById('createUserBtn').addEventListener('click', async () => {
+  const email = document.getElementById('newUserEmail').value.trim();
+  const role = document.getElementById('newUserRole').value;
+  const selectedStages = Array.from(document.getElementById('newUserStages').selectedOptions).map(o => o.value);
   
-  document.getElementById('editTitle').textContent = `🔧 تعديل صلاحيات - ${admin.email}`;
-  document.getElementById('editEmail').value = admin.email;
-  
-  const assigned = adminStagesMap[adminId] || [];
-  const container = document.getElementById('editStagesCheckboxes');
-  container.innerHTML = '';
-  allStages.forEach(stage => {
-    const checked = assigned.includes(stage.id) ? 'checked' : '';
-    container.innerHTML += `
-      <label>
-        <input type="checkbox" value="${stage.id}" ${checked} />
-        ${stage.name}
-      </label>
-    `;
-  });
-  
-  document.getElementById('editModal').dataset.adminId = adminId;
-  document.getElementById('editModal').classList.add('open');
-}
-
-document.getElementById('editCancelBtn').addEventListener('click', () => {
-  document.getElementById('editModal').classList.remove('open');
-});
-
-document.getElementById('editSaveBtn').addEventListener('click', async () => {
-  const adminId = document.getElementById('editModal').dataset.adminId;
-  const checkedStages = Array.from(document.querySelectorAll('#editStagesCheckboxes input:checked')).map(el => el.value);
-  
-  await client.from('admin_stages').delete().eq('admin_id', adminId);
-  
-  if (checkedStages.length > 0) {
-    const rows = checkedStages.map(stageId => ({
-      admin_id: adminId,
-      stage_id: stageId
-    }));
-    const { error } = await client.from('admin_stages').insert(rows);
-    if (error) {
-      alert('❌ فشل حفظ التعديلات: ' + error.message);
-      return;
-    }
+  if (!email) {
+    alert('⚠️ يرجى إدخال البريد الإلكتروني');
+    return;
   }
   
-  document.getElementById('editModal').classList.remove('open');
-  await loadAllData();
-  alert('✅ تم تحديث صلاحيات الأدمن بنجاح!');
+  const tempPassword = generateTempPassword();
+  
+  try {
+    const { data, error } = await client.auth.signUp({
+      email,
+      password: tempPassword,
+      options: {
+        data: { role }
+      }
+    });
+    
+    if (error) throw error;
+    
+    if (role === 'admin' && selectedStages.length > 0) {
+      const rows = selectedStages.map(stageId => ({
+        admin_id: data.user.id,
+        stage_id: stageId
+      }));
+      await client.from('admin_stages').insert(rows);
+    }
+    
+    document.getElementById('tempPasswordText').textContent = tempPassword;
+    document.getElementById('tempPasswordDisplay').style.display = 'block';
+    
+    alert(`✅ تم إنشاء الحساب بنجاح!\n\n📧 البريد: ${email}\n🔑 كلمة المرور المؤقتة: ${tempPassword}\n\n⚠️ يرجى إعطاء الموظف كلمة المرور وسيقوم بتغييرها عند أول تسجيل دخول.`);
+    
+    loadUsers();
+    document.getElementById('newUserEmail').value = '';
+    document.getElementById('newUserStages').selectedIndex = -1;
+    
+  } catch (err) {
+    alert('❌ فشل إنشاء الحساب: ' + err.message);
+  }
 });
+
+function generateTempPassword() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
 </script>
 </body>
 </html>
