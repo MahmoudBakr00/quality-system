@@ -8,7 +8,7 @@
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background: #0f172a; padding: 20px; color: #f1f5f9; }
-.container { max-width: 1300px; margin: 0 auto; }
+.container { max-width: 1400px; margin: 0 auto; }
 .header { display: flex; justify-content: space-between; align-items: center; background: #1e293b; padding: 16px 30px; border-radius: 14px; margin-bottom: 20px; flex-wrap: wrap; }
 .header h1 { color: #60a5fa; }
 .nav-links a { color: #93c5fd; text-decoration: none; background: #334155; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-left: 8px; }
@@ -18,12 +18,17 @@ body { background: #0f172a; padding: 20px; color: #f1f5f9; }
 
 .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; background: #1e293b; padding: 14px 20px; border-radius: 12px; margin-bottom: 20px; align-items: center; }
 .filter-bar select, .filter-bar input { padding: 8px 14px; border: none; border-radius: 6px; background: #334155; color: #f1f5f9; }
-.filter-bar button { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; background: #3b82f6; color: white; }
-.filter-bar button:hover { background: #2563eb; }
+.filter-bar button { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.filter-bar .btn-filter { background: #3b82f6; color: white; }
+.filter-bar .btn-filter:hover { background: #2563eb; }
+.filter-bar .btn-reset { background: #64748b; color: white; }
+.filter-bar .btn-reset:hover { background: #475569; }
+.filter-bar .btn-danger { background: #ef4444; color: white; }
+.filter-bar .btn-danger:hover { background: #dc2626; }
 
 .table-wrapper { overflow-x: auto; background: #1e293b; border-radius: 14px; padding: 10px; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 900px; }
-th { background: #334155; color: #94a3b8; padding: 10px 8px; text-align: center; border-bottom: 2px solid #475569; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 1000px; }
+th { background: #334155; color: #94a3b8; padding: 10px 8px; text-align: center; border-bottom: 2px solid #475569; position: sticky; top: 0; z-index: 10; }
 td { padding: 8px; text-align: center; border-bottom: 1px solid #334155; color: #e2e8f0; }
 tr:hover td { background: #2d3a4f; }
 .badge-pending { background: #f59e0b; color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: bold; }
@@ -36,8 +41,7 @@ tr:hover td { background: #2d3a4f; }
 .btn-action.reject { background: #ef4444; }
 .btn-action.reject:hover { background: #dc2626; }
 .loading, .no-data { text-align: center; padding: 40px; color: #94a3b8; }
-.btn-danger { background: #ef4444; color: white; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-.btn-danger:hover { background: #dc2626; }
+.actions-bar { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
 
 .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 100; }
 .modal-overlay.open { display: flex; }
@@ -72,15 +76,33 @@ tr:hover td { background: #2d3a4f; }
 <select id="filterStage"><option value="">كل المراحل</option></select>
 <select id="filterStatus"><option value="">كل الحالات</option><option value="pending">⏳ معلق</option><option value="approved">✅ معتمد</option><option value="rejected">❌ مرفوض</option></select>
 <input type="text" id="filterSerial" placeholder="السيريال" />
-<button id="applyFilter">🔍 تصفية</button>
-<button id="resetFilter" style="background:#64748b;">↺ إعادة تعيين</button>
-<button class="btn-danger" id="deleteAllDefects">🗑 مسح كل العيوب</button>
+<button class="btn-filter" id="applyFilter">🔍 تصفية</button>
+<button class="btn-reset" id="resetFilter">↺ إعادة تعيين</button>
+</div>
+
+<div class="actions-bar">
+<button class="btn-danger" id="deleteSelectedDefects">🗑 حذف المحدد</button>
+<button class="btn-danger" id="deleteAllDefects">🗑 مسح الكل</button>
 </div>
 
 <div class="table-wrapper">
 <table>
-<thead><tr><th>#</th><th>التاريخ</th><th>السيريال</th><th>المرحلة</th><th>نوع العيب</th><th>الوصف</th><th>الفني</th><th>الحالة</th><th>الإجراء</th><th></th></tr></thead>
-<tbody id="defectsTbody"><tr><td colspan="10" class="loading">⏳ جاري التحميل...</td></tr></tbody>
+<thead>
+  <tr>
+    <th><input type="checkbox" id="selectAllDefects"></th>
+    <th>#</th>
+    <th>التاريخ</th>
+    <th>السيريال</th>
+    <th>المرحلة</th>
+    <th>نوع العيب</th>
+    <th>الوصف</th>
+    <th>الفني</th>
+    <th>الحالة</th>
+    <th>الإجراء</th>
+    <th></th>
+  </tr>
+</thead>
+<tbody id="defectsTbody"><tr><td colspan="11" class="loading">⏳ جاري التحميل...</td></tr></tbody>
 </table>
 </div>
 </div>
@@ -153,7 +175,7 @@ async function loadDefects() {
     .select('*')
     .order('created_at', { ascending: false });
   if (error) {
-    document.getElementById('defectsTbody').innerHTML = `<tr><td colspan="10" class="loading">❌ فشل التحميل</td></tr>`;
+    document.getElementById('defectsTbody').innerHTML = `<tr><td colspan="11" class="loading">❌ فشل التحميل</td></tr>`;
     return;
   }
   allDefects = data || [];
@@ -163,12 +185,13 @@ async function loadDefects() {
 function renderDefects(data) {
   const tbody = document.getElementById('defectsTbody');
   if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="10" class="no-data">📭 لا توجد عيوب مسجلة</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="no-data">📭 لا توجد عيوب مسجلة</td></tr>`;
     return;
   }
   let html = '';
   data.forEach((d, i) => {
     html += `<tr>
+      <td><input type="checkbox" class="defect-checkbox" data-id="${d.id}"></td>
       <td>${i+1}</td>
       <td>${new Date(d.created_at).toLocaleDateString('ar-EG')}</td>
       <td>${d.serial_number || '-'}</td>
@@ -187,6 +210,11 @@ function renderDefects(data) {
     </tr>`;
   });
   tbody.innerHTML = html;
+  
+  // اختيار الكل
+  document.getElementById('selectAllDefects').addEventListener('change', function() {
+    document.querySelectorAll('.defect-checkbox').forEach(cb => cb.checked = this.checked);
+  });
   
   document.querySelectorAll('.btn-action.approve').forEach(btn => {
     btn.addEventListener('click', () => openActionModal(btn.dataset.id, 'approve'));
@@ -264,6 +292,27 @@ document.getElementById('resetFilter').addEventListener('click', () => {
   document.getElementById('filterStatus').value = '';
   document.getElementById('filterSerial').value = '';
   renderDefects(allDefects);
+});
+
+// ============ حذف العيوب المحددة ============
+document.getElementById('deleteSelectedDefects').addEventListener('click', async () => {
+  const checkboxes = document.querySelectorAll('#defectsTbody input[type="checkbox"]:checked');
+  if (checkboxes.length === 0) {
+    alert('⚠️ اختر العيوب التي تريد حذفها أولاً');
+    return;
+  }
+  
+  const ids = Array.from(checkboxes).map(cb => cb.dataset.id);
+  if (!confirm(`⚠️ هل أنت متأكد من حذف ${ids.length} عيب/عيوب محددة؟`)) return;
+  
+  try {
+    const { error } = await client.from('defects').delete().in('id', ids);
+    if (error) throw error;
+    alert(`✅ تم حذف ${ids.length} عيب/عيوب بنجاح`);
+    loadDefects();
+  } catch (err) {
+    alert('❌ فشل الحذف: ' + err.message);
+  }
 });
 
 // ============ مسح كل العيوب ============
