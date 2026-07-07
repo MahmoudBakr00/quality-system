@@ -1,52 +1,3 @@
-// =========================================================
-// التحقق من الجلسة قبل تحميل الصفحة
-// =========================================================
-async function checkAuth() {
-  try {
-    const { data: { session } } = await client.auth.getSession();
-    if (!session) {
-      window.location.href = 'index.html';
-      return;
-    }
-    
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) {
-      window.location.href = 'index.html';
-      return;
-    }
-    
-    // التحقق من دور المستخدم
-    const { data: profile, error } = await client
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-    
-    if (error || !profile) {
-      console.error('Profile error:', error);
-      await client.auth.signOut();
-      window.location.href = 'index.html';
-      return;
-    }
-    
-    if (profile.role !== 'admin') {
-      await client.auth.signOut();
-      window.location.href = 'technician.html';
-      return;
-    }
-    
-    document.getElementById('adminEmail').textContent = user.email;
-    await loadLookups();
-    await loadData();
-    await loadDefects();
-  } catch (error) {
-    console.error('Auth error:', error);
-    window.location.href = 'index.html';
-  }
-}
-
-// استدعاء الدالة
-checkAuth();
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -160,13 +111,43 @@ let allData = [];
 let allStages = [];
 let allForms = [];
 
+// =========================================================
+// التحقق من الجلسة قبل تحميل الصفحة
+// =========================================================
 async function checkAuth() {
   try {
-    const { data: { user } } = await client.auth.getUser();
-    if (!user) { 
-      window.location.href = 'index.html'; 
-      return; 
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) {
+      window.location.href = 'index.html';
+      return;
     }
+    
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) {
+      window.location.href = 'index.html';
+      return;
+    }
+    
+    // التحقق من دور المستخدم
+    const { data: profile, error } = await client
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    if (error || !profile) {
+      console.error('Profile error:', error);
+      await client.auth.signOut();
+      window.location.href = 'index.html';
+      return;
+    }
+    
+    if (profile.role !== 'admin') {
+      await client.auth.signOut();
+      window.location.href = 'technician.html';
+      return;
+    }
+    
     document.getElementById('adminEmail').textContent = user.email;
     await loadLookups();
     await loadData();
@@ -176,12 +157,15 @@ async function checkAuth() {
     window.location.href = 'index.html';
   }
 }
+
+// استدعاء الدالة
 checkAuth();
 
 document.getElementById('logoutBtn').addEventListener('click', async () => {
   await client.auth.signOut();
   window.location.href = 'index.html';
 });
+
 document.getElementById('refreshBtn').addEventListener('click', () => {
   loadData();
   loadDefects();
