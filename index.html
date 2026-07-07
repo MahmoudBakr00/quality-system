@@ -34,9 +34,6 @@ body { background: #0f172a; display: flex; justify-content: center; align-items:
 <button type="submit" id="loginBtn">دخول</button>
 <div id="errorMsg" class="error-msg"></div>
 </form>
-<div class="register-link">
-ليس لديك حساب؟ <a id="registerLink">إنشاء حساب جديد</a>
-</div>
 <div class="footer">نظام إدارة فحص الصاج - نسخة Supabase</div>
 </div>
 
@@ -142,47 +139,11 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
   }
 });
 
-// إنشاء حساب جديد
-document.getElementById('registerLink').addEventListener('click', async () => {
-  const email = prompt('📧 أدخل البريد الإلكتروني للمستخدم الجديد:');
-  if (!email) return;
-  
-  const password = prompt('🔑 أدخل كلمة المرور (6 أحرف على الأقل):');
-  if (!password || password.length < 6) {
-    alert('⚠️ كلمة المرور يجب أن تكون 6 أحرف أو أكثر');
-    return;
-  }
-  
-  const roleChoice = confirm(
-    '👤 اختر دور المستخدم:\n\n' +
-    'اضغط "موافق" → أدمن (مدير)\n' +
-    'اضغط "إلغاء" → فني (تقني)'
-  );
-  const role = roleChoice ? 'admin' : 'technician';
-
-  try {
-    const { data, error } = await client.auth.signUp({
-      email,
-      password,
-      options: { 
-        data: { role },
-        emailRedirectTo: window.location.origin + '/index.html'
-      }
-    });
-    
-    if (error) {
-      alert('❌ فشل إنشاء الحساب: ' + error.message);
-      return;
-    }
-    
-    alert('✅ تم إنشاء الحساب بنجاح!\n' +
-      '📧 ' + email + '\n' +
-      '👤 الدور: ' + (role === 'admin' ? 'أدمن' : 'فني') + '\n\n' +
-      'يمكنك الآن تسجيل الدخول.');
-  } catch (error) {
-    alert('❌ فشل إنشاء الحساب: ' + error.message);
-  }
-});
+// ملاحظة أمنية: تم حذف إنشاء الحساب الذاتي من هنا عمدًا.
+// إنشاء المستخدمين (فني/أدمن) لازم يتم فقط من صفحة admin-users.html
+// وهي محمية بحيث لا يدخلها إلا مستخدم مسجل دوره "admin" بالفعل.
+// السماح بإنشاء حساب "أدمن" من صفحة تسجيل الدخول العامة كان ثغرة خطيرة
+// تسمح لأي زائر برفع صلاحياته لنفسه.
 </script>
 </body>
 </html>
